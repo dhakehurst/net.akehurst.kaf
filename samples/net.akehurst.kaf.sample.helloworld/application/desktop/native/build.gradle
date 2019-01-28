@@ -1,0 +1,24 @@
+
+
+// to provide a gradle run for the native application
+
+def targets = ['macos']
+
+for (target in targets) {
+    kotlin.targets[target].compilations.main.outputKinds("EXECUTABLE")
+    //would like to define the entry point here !
+}
+
+afterEvaluate {
+    for (target in targets) {
+			String taskName = "copyResourcesToExecutable_${target}"
+			def targetTestTask = tasks.getByName("${target}Test")
+			tasks.create(name: taskName, type: Copy) {
+				for (sourceSet in kotlin.sourceSets) {
+					from sourceSet.resources
+				}
+				into new File(targetTestTask.inputs.properties.executable).parentFile
+			}
+			targetTestTask.dependsOn(taskName)
+    }
+}
