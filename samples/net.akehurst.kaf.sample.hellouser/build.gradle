@@ -15,7 +15,6 @@
  */
 
 buildscript {
-
     repositories {
         mavenLocal()
         mavenCentral()
@@ -31,7 +30,7 @@ buildscript {
 
 subprojects {
 
-    group 'net.akehurst.kaf.sample.helloworld'
+    group 'net.akehurst.kaf.sample.hellouser'
     version '1.0.0-SNAPSHOT'
 
     apply plugin: "org.jetbrains.kotlin.multiplatform"
@@ -40,9 +39,13 @@ subprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven {
+            name "soywiz"
+            url "https://dl.bintray.com/soywiz/soywiz"
+        }
     }
 
-    buildDir = new File(rootProject.projectDir, ".gradle/build/" + project.name)
+    buildDir = new File(rootProject.projectDir, ".gradle-build/" + project.name)
 
     kotlin {
         targets {
@@ -61,13 +64,13 @@ subprojects {
                     }
                 }
             }
-            fromPreset(presets.macosX64, 'macos') {
+            fromPreset(presets.macosX64, 'macosX64') {
                 /* You can specify additional settings for the 'linux' target here */
             }
 
             // This preset is for iPhone emulator
             // Switch here to presets.iosArm64 (or iosArm32) to build library for iPhone device
-            fromPreset(presets.iosX64, 'ios') {
+            fromPreset(presets.iosX64, 'iosX64') {
                 compilations.main.outputKinds('FRAMEWORK')
             }
         }
