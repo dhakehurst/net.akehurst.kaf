@@ -1,0 +1,31 @@
+kotlin {
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                api project(":computational.greeter.api")
+                implementation "com.soywiz:korge-metadata:$version_korge"
+            }
+        }
+        jvm8Main {
+            dependencies {
+                implementation "com.soywiz:korge-jvm:$version_korge"
+            }
+        }
+        jsMain {
+            dependencies {
+                implementation "com.soywiz:korge-js:$version_korge"
+            }
+        }
+        jsMain {
+            dependencies {
+                implementation "com.soywiz:korge-js:$version_korge"
+            }
+        }
+        macosX64Main {
+            dependencies {
+                implementation "com.soywiz:korge-macosx64:$version_korge"
+            }
+        }
+    }
+}

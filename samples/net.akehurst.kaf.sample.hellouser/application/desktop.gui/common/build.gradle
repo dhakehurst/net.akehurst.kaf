@@ -1,0 +1,12 @@
+kotlin {
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(":computational.greeter.simple")
+                implementation project(":engineering.greeter2gui")
+            }
+        }
+
+    }
+}

@@ -1,0 +1,22 @@
+plugins {
+    id 'application'
+}
+
+
+    mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.jvm.Main"
+
+kotlin {
+    sourceSets {
+        jvm8Main {
+            dependencies {
+                implementation project(":application.desktop.gui.common")
+            }
+        }
+    }
+}
+
+
+// need this so that the gradle application plugin can find the kotlin lib
+dependencies {
+    runtime project(path:':application.desktop.gui.jvm', configuration:'jvm8RuntimeElements')
+}

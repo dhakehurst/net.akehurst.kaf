@@ -7,6 +7,7 @@ import com.soywiz.korge.view.Container
 import com.soywiz.korge.view.solidRect
 import com.soywiz.korim.color.Colors
 import com.soywiz.korinject.AsyncInjector
+import com.soywiz.korio.async.runBlockingNoSuspensions
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.akehurst.kaf.sample.hellouser.greeter.api.Credentials
@@ -19,18 +20,20 @@ class Greeter2Gui : GreeterNotification {
 
     lateinit var greeterRequest: GreeterRequest
 
+    val startScene = StartScene()
     val loginScene = LoginScene()
     val messageScene = MessageScene()
 
     val module = object : Module() {
-        override val mainScene: KClass<out Scene> = LoginScene::class
+        override val title = "Hello User"
+        override val mainScene: KClass<out Scene> = StartScene::class
 
         override suspend fun init(injector: AsyncInjector): Unit = injector.run {
+            mapPrototype { startScene }
             mapPrototype { loginScene }
             mapPrototype { messageScene }
         }
     }
-
 
 
     fun start() {
@@ -39,11 +42,15 @@ class Greeter2Gui : GreeterNotification {
         }
     }
 
-    override fun started() {
+    // --- GreeterNotification ---
 
+    override fun started() {
+        runBlockingNoSuspensions {
+            this.startScene.sceneContainer.changeTo<LoginScene>()   //TODO: why can't I changeTo(loginScene)
+        }
     }
 
     override fun sendMessage(message: Message) {
-
+        this.messageScene.text = message.value
     }
 }
