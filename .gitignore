@@ -25,6 +25,8 @@ hs_err_pid*
 
 local.properties
 
+.gradle-build/
+.gradle/
 .idea/
 out/
 bin/
