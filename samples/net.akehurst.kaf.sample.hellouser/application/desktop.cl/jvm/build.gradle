@@ -3,7 +3,7 @@ plugins {
 }
 
 
-    mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.jvm.Main"
+    mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.cl.jvm.Main"
 
 kotlin {
     sourceSets {

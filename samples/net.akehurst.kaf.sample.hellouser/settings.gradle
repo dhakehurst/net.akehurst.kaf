@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2018 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
+ * Copyright (C) 2019 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,4 +26,4 @@ fileTree('.') {
     println "including "+prj+" at "+relativePath(it.parent)
 }
 
-enableFeaturePreview('GRADLE_METADATA')
+//enableFeaturePreview('GRADLE_METADATA')
