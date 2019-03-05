@@ -3,7 +3,7 @@ plugins {
 }
 
 //application {
-    mainClassName = "net.akehurst.kaf.sample.Server"
+    mainClassName = "net.akehurst.kaf.sample.hellouser.application.web.Server"
 //}
 
 kotlin {

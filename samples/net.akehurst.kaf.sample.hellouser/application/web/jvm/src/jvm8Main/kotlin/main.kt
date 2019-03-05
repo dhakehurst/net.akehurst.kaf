@@ -1,4 +1,4 @@
-package net.akehurst.kaf.sample
+package net.akehurst.kaf.sample.hellouser.application.web
 
 import io.ktor.application.call
 import io.ktor.http.ContentType

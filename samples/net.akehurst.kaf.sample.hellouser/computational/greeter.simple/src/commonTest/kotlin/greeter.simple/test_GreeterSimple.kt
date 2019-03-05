@@ -1,4 +1,4 @@
-package net.akehurst.kaf.sample.hellouser.greeter.simple
+package net.akehurst.kaf.sample.hellouser.computational.greeter.simple
 
 import net.akehurst.kaf.sample.hellouser.greeter.api.Credentials
 import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterNotification

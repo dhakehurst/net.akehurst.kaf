@@ -1,8 +1,12 @@
-package net.akehurst.kaf.sample
+package net.akehurst.kaf.sample.hellouser.application.desktop.jvm
+
+import net.akehurst.kaf.sample.hellouser.application.desktop.common.DesktopApplication
+
 
 object Main {
     @JvmStatic
     fun main(args : Array<String>) {
-        println("Hello World")
+        val application = DesktopApplication()
+        application.start()
     }
 }

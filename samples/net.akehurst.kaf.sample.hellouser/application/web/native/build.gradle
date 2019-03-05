@@ -1,8 +1,12 @@
 
 kotlin {
-
+    targets {
+        fromPreset(presets.macosX64, 'macosX64') {
+            /* You can specify additional settings for the 'linux' target here */
+        }
+    }
     sourceSets {
-        macosMain {
+        macosX64Main {
             dependencies {
                 implementation "io.ktor:ktor-server-core:$version_ktor"
                 implementation "io.ktor:ktor-server-netty:$version_ktor"
@@ -13,10 +17,10 @@ kotlin {
 
 
 // to provide a gradle run for the native application
-def targets = ['macos']
+def targets = ['macosX64']
 
 for (target in targets) {
-    kotlin.targets[target].compilations.main.outputKinds("EXECUTABLE")
+//    kotlin.targets[target].compilations.main.outputKinds("EXECUTABLE")
     //would like to define the entry point here !
 }
 

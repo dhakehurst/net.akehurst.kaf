@@ -4,8 +4,10 @@ kotlin {
         commonMain {
             dependencies {
                 implementation project(":computational.greeter.simple")
-
+                implementation project(":engineering.greeter2cl")
+                implementation project(":technology.cl.simple")
             }
         }
+
     }
 }

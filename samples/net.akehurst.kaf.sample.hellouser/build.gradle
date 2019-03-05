@@ -64,15 +64,15 @@ subprojects {
                     }
                 }
             }
-            fromPreset(presets.macosX64, 'macosX64') {
+            //fromPreset(presets.macosX64, 'macosX64') {
                 /* You can specify additional settings for the 'linux' target here */
-            }
+            //}
 
             // This preset is for iPhone emulator
             // Switch here to presets.iosArm64 (or iosArm32) to build library for iPhone device
-            fromPreset(presets.iosX64, 'iosX64') {
-                compilations.main.outputKinds('FRAMEWORK')
-            }
+            //fromPreset(presets.iosX64, 'iosX64') {
+            //    compilations.main.outputKinds('FRAMEWORK')
+            //}
         }
         sourceSets {
             commonMain {
@@ -107,21 +107,7 @@ subprojects {
                     implementation "org.jetbrains.kotlin:kotlin-test-js:${version_kotlin}"
                 }
             }
-            nativeCommonMain {
-                dependencies {
 
-                }
-            }
-            macosMain {
-                dependencies {
-                    dependsOn nativeCommonMain
-                }
-            }
-            macosTest {
-                dependencies {
-
-                }
-            }
         }
     }
 }
