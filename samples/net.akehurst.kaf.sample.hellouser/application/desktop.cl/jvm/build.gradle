@@ -3,20 +3,13 @@ plugins {
 }
 
 
-    mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.cl.jvm.Main"
+mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.cl.jvm.Main"
 
-kotlin {
-    sourceSets {
-        jvm8Main {
-            dependencies {
-                implementation project(":application.desktop.cl.common")
-            }
-        }
-    }
-}
-
-
-// need this so that the gradle application plugin can find the kotlin lib
 dependencies {
+    jvm8MainImplementation project(":application.desktop.cl.common")
+
+    jvm8MainImplementation "net.akehurst.kaf:kaf-common-jvm8:$version_kaf"
+
+    // need this so that the gradle application plugin can find the kotlin lib
     runtime project(path:':application.desktop.cl.jvm', configuration:'jvm8RuntimeElements')
 }

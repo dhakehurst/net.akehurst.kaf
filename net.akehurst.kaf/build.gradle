@@ -1,0 +1,82 @@
+/**
+ * Copyright (C) 2018 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+buildscript {
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        google()       // for com.android.tools.build
+    }
+
+    dependencies {
+        classpath "com.android.tools.build:gradle:$version_abt"   // for com.android.common
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$version_kotlin"
+    }
+}
+
+subprojects {
+
+    group 'net.akehurst.kaf'
+    version '1.0.0-SNAPSHOT'
+
+    apply plugin: "org.jetbrains.kotlin.multiplatform"
+    apply plugin: "maven-publish"
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    buildDir = new File(rootProject.projectDir, ".gradle-build/" + project.name)
+
+    kotlin {
+        targets {
+            jvm('jvm8') {
+                compilations.all {
+                    tasks[compileKotlinTaskName].kotlinOptions {
+                        jvmTarget = '1.8'
+                    }
+                }
+            }
+            js('js') {
+                compilations.all {
+                    tasks[compileKotlinTaskName].kotlinOptions {
+                        moduleKind = 'plain'
+                    }
+                }
+            }
+            macosX64('macosX64') {
+                /* You can specify additional settings for the 'linux' target here */
+            }
+        }
+    }
+    dependencies {
+        commonMainImplementation "org.jetbrains.kotlin:kotlin-stdlib-common:${version_kotlin}"
+        commonTestImplementation "org.jetbrains.kotlin:kotlin-test-common:${version_kotlin}"
+        commonTestImplementation "org.jetbrains.kotlin:kotlin-test-annotations-common:${version_kotlin}"
+
+        jvm8MainImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${version_kotlin}"
+        jvm8TestImplementation "org.jetbrains.kotlin:kotlin-test:${version_kotlin}"
+        jvm8TestImplementation "org.jetbrains.kotlin:kotlin-test-junit:${version_kotlin}"
+
+        jsMainImplementation "org.jetbrains.kotlin:kotlin-stdlib-js:${version_kotlin}"
+        jsTestImplementation "org.jetbrains.kotlin:kotlin-test-js:${version_kotlin}"
+    }
+
+}

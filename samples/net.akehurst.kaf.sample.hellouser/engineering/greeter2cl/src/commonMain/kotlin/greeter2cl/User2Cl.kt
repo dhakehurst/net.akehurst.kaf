@@ -22,15 +22,15 @@ import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterRequest
 import net.akehurst.kaf.sample.hellouser.greeter.api.Message
 import net.akehurst.kaf.simple.hellouser.technology.cl.api.Console
 
-class Greeter2Cl : GreeterNotification {
+class Greeter2Cl(afIdentity:String) : GreeterNotification {
 
     lateinit var greeterRequest: GreeterRequest
 
     lateinit var console: Console
 
     override fun started() {
-        console.stdout.write("Started")
-        val username = console.environment.variable["user"] ?: "<unknown>"
+
+        val username = console.environment.variable["USER"] ?: "<unknown>"
 
         greeterRequest.authenticate(Credentials(username, "<unknown>"))
     }

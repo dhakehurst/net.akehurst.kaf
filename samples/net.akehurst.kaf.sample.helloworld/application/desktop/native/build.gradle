@@ -2,7 +2,7 @@
 
 // to provide a gradle run for the native application
 
-def targets = ['macos']
+def targets = ['macosX64']
 
 for (target in targets) {
     kotlin.targets[target].compilations.main.outputKinds("EXECUTABLE")

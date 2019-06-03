@@ -39,7 +39,7 @@ class test_GreeterSimple {
     @Test
     fun start() {
 
-        val sut = GreeterSimple()
+        val sut = GreeterSimple("sut")
         sut.out = out
 
         sut.start()
@@ -53,7 +53,7 @@ class test_GreeterSimple {
     @Test
     fun authenticate() {
 
-        val sut = GreeterSimple()
+        val sut = GreeterSimple("sut")
         sut.out = out
         sut.start()
         assertEquals( true, started_called )

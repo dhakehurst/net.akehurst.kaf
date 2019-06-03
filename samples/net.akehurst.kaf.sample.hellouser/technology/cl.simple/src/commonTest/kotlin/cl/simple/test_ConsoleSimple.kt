@@ -26,7 +26,7 @@ class test_ConsoleSimple {
     @Test
     fun stdout_write() {
 
-        val sut:Console = ConsoleSimple()
+        val sut:Console = ConsoleSimple("sut")
 
         sut.stdout.write("Test")
 

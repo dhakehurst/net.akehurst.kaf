@@ -1,13 +1,11 @@
-kotlin {
+dependencies {
 
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation project(":computational.greeter.simple")
-                implementation project(":engineering.greeter2cl")
-                implementation project(":technology.cl.simple")
-            }
-        }
+    commonMainApi "net.akehurst.kaf:kaf-common:$version_kaf"
+    commonMainImplementation "net.akehurst.kaf:kaf-service-logging-console:$version_kaf"
 
-    }
+    commonMainImplementation project(":computational.greeter.simple")
+    commonMainImplementation project(":engineering.greeter2cl")
+    commonMainImplementation project(":technology.cl.simple")
+
+
 }

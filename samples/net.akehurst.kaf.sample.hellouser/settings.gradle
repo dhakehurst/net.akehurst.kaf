@@ -26,4 +26,4 @@ fileTree('.') {
     println "including "+prj+" at "+relativePath(it.parent)
 }
 
-//enableFeaturePreview('GRADLE_METADATA')
+enableFeaturePreview('GRADLE_METADATA')

@@ -18,11 +18,10 @@ package net.akehurst.kaf.sample.hellouser.application.desktop.cl.jvm
 
 import net.akehurst.kaf.sample.hellouser.application.desktop.cl.common.DesktopApplication
 
-
 object Main {
     @JvmStatic
     fun main(args : Array<String>) {
         val application = DesktopApplication()
-        application.start()
+        application.af.start("")
     }
 }

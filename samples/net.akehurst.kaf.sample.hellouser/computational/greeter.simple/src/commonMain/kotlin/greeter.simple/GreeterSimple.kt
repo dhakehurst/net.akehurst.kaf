@@ -16,18 +16,26 @@
 
 package net.akehurst.kaf.sample.hellouser.computational.greeter.simple
 
+import net.akehurst.kaf.common.*
+
 import net.akehurst.kaf.sample.hellouser.greeter.api.Credentials
 import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterNotification
 import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterRequest
 import net.akehurst.kaf.sample.hellouser.greeter.api.Message
+import net.akehurst.kaf.service.logging.api.LogLevel
 
-class GreeterSimple
+class GreeterSimple( afIdentity:String )
     : GreeterRequest
 {
+
+    val af = afActive(afIdentity) {
+
+    }
 
     lateinit var out: GreeterNotification
 
     override fun start() {
+        af.logger.log(LogLevel.INFO, {"start"})
         out.started()
     }
 

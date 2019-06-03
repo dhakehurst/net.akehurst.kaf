@@ -17,27 +17,43 @@
 package net.akehurst.kaf.sample.hellouser.application.desktop.cl.common
 
 
+import net.akehurst.kaf.common.*
+import net.akehurst.kaf.service.logging.console.*
+
 import net.akehurst.kaf.sample.hellouser.computational.greeter.simple.GreeterSimple
+import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.simple.hellouser.engineering.greeter2cl.Greeter2Cl
 import net.akehurst.kaf.simple.hellouser.technology.cl.simple.ConsoleSimple
 
-class DesktopApplication {
+class DesktopApplication :Application {
+
+    // --- services ---
 
     //--- computational ---
-    val greeter = GreeterSimple()
+    @Composite
+    val greeter = GreeterSimple("greeter")
 
     //--- engineering ---
-    val user2cl = Greeter2Cl()
+    @Composite
+    val user2cl = Greeter2Cl("user2cl")
 
     //--- technology ---
-    val console = ConsoleSimple()
+    @Composite
+    val console = ConsoleSimple("console")
 
+    override  val af = afApplication(this, "desktop") {
+        services["logger"] = LoggerConsole(LogLevel.ALL)
 
-    fun start() {
-        greeter.out = user2cl
-        user2cl.console = console
-
-        greeter.start()
+        initialise = {
+            greeter.out = user2cl
+            user2cl.console = console
+            user2cl.greeterRequest = greeter
+        }
+        execute = {
+            greeter.start()
+        }
     }
+
+
 
 }

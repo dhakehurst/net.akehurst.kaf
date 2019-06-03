@@ -29,7 +29,7 @@ class test_Greeter2Cl {
 
     //@Test
     fun started() {
-        val sut = Greeter2Cl()
+        val sut = Greeter2Cl("sut")
         val actual = mutableListOf<String>()
         sut.console = object : Console {
             override val stdout = object : OutputStream {
@@ -52,7 +52,7 @@ class test_Greeter2Cl {
 
     @Test
     fun sendMessage() {
-        val sut = Greeter2Cl()
+        val sut = Greeter2Cl("sut")
         val actual = mutableListOf<String>()
         sut.console = object : Console {
             override val stdout = object : OutputStream {

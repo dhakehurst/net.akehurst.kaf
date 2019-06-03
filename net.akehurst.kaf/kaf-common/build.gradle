@@ -1,0 +1,8 @@
+dependencies {
+    commonMainApi project(":kaf-api")
+    commonMainApi project(":kaf-service-logging-api")
+
+    jvm8MainImplementation "org.jetbrains.kotlin:kotlin-reflect:${version_kotlin}"
+
+    commonTestImplementation project(":kaf-service-logging-console")
+}

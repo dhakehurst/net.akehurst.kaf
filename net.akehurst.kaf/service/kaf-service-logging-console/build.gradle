@@ -1,0 +1,6 @@
+dependencies {
+
+    commonMainImplementation project(":kaf-common")
+    commonMainImplementation project(":kaf-service-logging-api")
+
+}

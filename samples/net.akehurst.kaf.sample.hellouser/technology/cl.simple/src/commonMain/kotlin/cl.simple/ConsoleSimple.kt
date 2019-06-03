@@ -20,7 +20,7 @@ import net.akehurst.kaf.simple.hellouser.technology.cl.api.Console
 import net.akehurst.kaf.simple.hellouser.technology.cl.api.Environment
 import net.akehurst.kaf.simple.hellouser.technology.cl.api.OutputStream
 
-class ConsoleSimple : Console {
+class ConsoleSimple(afIdentity:String) : Console {
 
     override val stdout = object : OutputStream {
         override fun write(content: String) {
@@ -30,7 +30,7 @@ class ConsoleSimple : Console {
 
     override val environment = object :Environment {
         override val variable:Map<String,String> get() {
-            TODO()
+            return mapOf("USER" to "dha")
         }
     }
 }
