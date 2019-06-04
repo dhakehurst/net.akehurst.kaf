@@ -17,11 +17,13 @@
 package net.akehurst.kaf.sample.hellouser.application.desktop.cl.common
 
 
-import net.akehurst.kaf.common.*
-import net.akehurst.kaf.service.logging.console.*
 
+import net.akehurst.kaf.api.Application
+import net.akehurst.kaf.api.Composite
+import net.akehurst.kaf.common.afApplication
 import net.akehurst.kaf.sample.hellouser.computational.greeter.simple.GreeterSimple
 import net.akehurst.kaf.service.logging.api.LogLevel
+import net.akehurst.kaf.service.logging.console.LoggerConsole
 import net.akehurst.kaf.simple.hellouser.engineering.greeter2cl.Greeter2Cl
 import net.akehurst.kaf.simple.hellouser.technology.cl.simple.ConsoleSimple
 

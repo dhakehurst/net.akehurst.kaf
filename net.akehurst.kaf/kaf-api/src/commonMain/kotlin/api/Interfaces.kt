@@ -1,17 +1,20 @@
 package net.akehurst.kaf.api
 
-interface Service {
-
-}
+import net.akehurst.kaf.service.logging.api.Logger
 
 interface AFIdentifiable {
     val identity: String
+    val logger: Logger
 }
 interface Identifiable {
     val af:AFIdentifiable
 }
 
-interface AFActive : AFIdentifiable
+interface AFActive : AFIdentifiable {
+    fun start()
+    fun join()
+    fun stop()
+}
 interface Active {
     val af:AFActive
 }
@@ -19,7 +22,9 @@ interface Active {
 interface AFComponent : AFActive
 interface Component
 
-interface AFApplication : AFComponent
+interface AFApplication : AFComponent {
+    fun start(commandLineArgs: List<String>)
+}
 interface Application {
     val af: AFApplication
 }

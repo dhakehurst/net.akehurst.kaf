@@ -1,12 +1,12 @@
 package net.akehurst.kaf.service.logging.api
 
-import net.akehurst.kaf.api.Service
+import net.akehurst.kaf.service.api.Service
 
 interface Logger : Service {
-    fun log(level:LogLevel, message:()->String)
+    fun log(level: LogLevel, message: () -> String?)
 }
 
-class LogLevel(val value:Int, val stringValue:String) {
+class LogLevel(val value: Int, val stringValue: String) {
 
     companion object {
         val FATAL = LogLevel(6000, "FATAL")

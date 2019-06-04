@@ -16,6 +16,7 @@
 
 package net.akehurst.kaf.sample.hellouser.computational.greeter.simple
 
+import net.akehurst.kaf.api.Active
 import net.akehurst.kaf.common.*
 
 import net.akehurst.kaf.sample.hellouser.greeter.api.Credentials
@@ -25,11 +26,11 @@ import net.akehurst.kaf.sample.hellouser.greeter.api.Message
 import net.akehurst.kaf.service.logging.api.LogLevel
 
 class GreeterSimple( afIdentity:String )
-    : GreeterRequest
+    : GreeterRequest, Active
 {
 
-    val af = afActive(afIdentity) {
-
+    override  val af = afActive(this,afIdentity) {
+        execute = {}
     }
 
     lateinit var out: GreeterNotification
