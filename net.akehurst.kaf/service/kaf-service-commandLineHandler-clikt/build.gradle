@@ -1,0 +1,9 @@
+dependencies {
+
+    commonMainImplementation project(":kaf-service-commandLineHandler-api")
+    commonMainApi "com.github.ajalt:clikt:1.7.0"
+
+
+    jvm8TestImplementation project(":kaf-common")
+    jvm8TestImplementation project(":kaf-service-logging-console")
+}
