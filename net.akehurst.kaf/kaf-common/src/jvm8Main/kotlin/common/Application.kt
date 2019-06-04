@@ -17,7 +17,6 @@ import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 import kotlin.reflect.jvm.isAccessible
 
-
 actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
     val builder = AFApplicationDefault.Builder(self, id)
     builder.init()
@@ -27,7 +26,7 @@ actual inline fun afApplication(self: Application, id: String, init: AFApplicati
 actual class AFApplicationDefault(
         val self: Application,
         afIdentity: String,
-        val services: Map<String, Service>,
+        val defineServices: (commandLineArgs:List<String>) -> Map<String, Service>,
         initialise: () -> Unit,
         execute: () -> Unit,
         terminate: () -> Unit
@@ -37,17 +36,14 @@ actual class AFApplicationDefault(
         actual var initialise: () -> Unit = {}
         actual var execute: () -> Unit = {}
         actual var terminate: () -> Unit = {}
-        actual val services = mutableMapOf<String, Service>()
+        actual var defineServices: (commandLineArgs:List<String>) -> Map<String, Service> = { emptyMap() }
         actual fun build(): AFApplication {
-            return AFApplicationDefault(self, id, services, initialise, execute, terminate)
+            return AFApplicationDefault(self, id, defineServices, initialise, execute, terminate)
         }
     }
 
-    override fun start(commandLineArgs: List<String>) {
-        logger().log(LogLevel.DEBUG, { "[${this.identity}] Application.start" })
-        this.doInjections(commandLineArgs)
-        super.start()
-    }
+    private lateinit var _services:Map<String, Service>
+    val services:Map<String, Service> get() { return this._services }
 
     private fun logger(): Logger {
         return this.services["logger"] as Logger
@@ -113,14 +109,20 @@ actual class AFApplicationDefault(
                 if ((property as KProperty1<Any, Any>).getDelegate(obj) is CommandLineValue<*>) {
                     val ref = (property as KProperty1<Any, Any>).getDelegate(obj) as CommandLineValue<Any>
                     if (services.containsKey(ref.handlerServiceName) && services[ref.handlerServiceName] is CommandLineHandler) {
-                        ref.handler = services[ref.handlerServiceName] as CommandLineHandler
-                        val value: Any? = ref.handler.get(ref.path, ref.default)
-                        logger().log(LogLevel.TRACE, { "${this.identity}.${property.name} = ${value}" })
+                        ref.setHandlerAndRegister( services[ref.handlerServiceName] as CommandLineHandler)
+                        logger().log(LogLevel.TRACE, { "${this.identity}.${property.name} = ${ref.handlerServiceName}[${ref.path}]" })
                     } else {
                         throw ApplicationInstantiationException("Cannot find a CommandLineHandler service named ${ref.handlerServiceName}, at ${this.identity}.${property.name}")
                     }
                 }
             }
         }
+    }
+
+    override fun start(commandLineArgs: List<String>) {
+        this._services = this.defineServices(commandLineArgs)
+        logger().log(LogLevel.DEBUG, { "[${this.identity}] Application.start" })
+        this.doInjections(commandLineArgs)
+        super.start()
     }
 }

@@ -20,6 +20,6 @@ open class Reference<T : Any>(val reference: String) : ReadWriteProperty<Any, T>
 
 class ServiceReference<T : Any>(reference: String) : Reference<T>(reference)
 
-inline fun <T : Any> serviceReference(serviceIdentity: String): ServiceReference<T> {
+fun <T : Any> serviceReference(serviceIdentity: String): ServiceReference<T> {
     return ServiceReference<T>(serviceIdentity)
 }

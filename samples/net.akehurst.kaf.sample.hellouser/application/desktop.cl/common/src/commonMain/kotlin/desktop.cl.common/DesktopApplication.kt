@@ -17,17 +17,19 @@
 package net.akehurst.kaf.sample.hellouser.application.desktop.cl.common
 
 
-
 import net.akehurst.kaf.api.Application
 import net.akehurst.kaf.api.Composite
 import net.akehurst.kaf.common.afApplication
 import net.akehurst.kaf.sample.hellouser.computational.greeter.simple.GreeterSimple
+import net.akehurst.kaf.service.commandLineHandler.clikt.CommandLineHandlerClikt
+import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
+import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggerConsole
 import net.akehurst.kaf.simple.hellouser.engineering.greeter2cl.Greeter2Cl
 import net.akehurst.kaf.simple.hellouser.technology.cl.simple.ConsoleSimple
 
-class DesktopApplication :Application {
+class DesktopApplication : Application {
 
     // --- services ---
 
@@ -43,8 +45,19 @@ class DesktopApplication :Application {
     @Composite
     val console = ConsoleSimple("console")
 
-    override  val af = afApplication(this, "desktop") {
-        services["logger"] = LoggerConsole(LogLevel.ALL)
+    override val af = afApplication(this, "desktop") {
+        defineServices = { clArgs ->
+            mapOf(
+                    "logger" to LoggerConsole(LogLevel.ALL),
+                    "configuration" to ConfigurationMap(
+                            mutableMapOf(
+                                    "greeting" to "Hello World"
+                            )
+                    ),
+                    "cmdLine" to CommandLineHandlerClikt(clArgs)
+                    //"cmdLine" to CommandLineHandlerSimple(clArgs)
+            )
+        }
 
         initialise = {
             greeter.out = user2cl
@@ -55,7 +68,6 @@ class DesktopApplication :Application {
             greeter.start()
         }
     }
-
 
 
 }

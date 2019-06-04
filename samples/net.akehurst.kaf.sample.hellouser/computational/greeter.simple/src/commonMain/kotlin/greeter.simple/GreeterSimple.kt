@@ -23,11 +23,16 @@ import net.akehurst.kaf.sample.hellouser.greeter.api.Credentials
 import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterNotification
 import net.akehurst.kaf.sample.hellouser.greeter.api.GreeterRequest
 import net.akehurst.kaf.sample.hellouser.greeter.api.Message
+import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
+import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.service.logging.api.LogLevel
 
 class GreeterSimple( afIdentity:String )
     : GreeterRequest, Active
 {
+
+    val confGreeting: String? by configuredValue("configuration","greeting") {"Hello"}
+    val greeting: String? by commandLineValue("cmdLine","greeting") {confGreeting}
 
     override  val af = afActive(this,afIdentity) {
         execute = {}
@@ -41,6 +46,6 @@ class GreeterSimple( afIdentity:String )
     }
 
     override fun authenticate(credentials:Credentials) {
-        out.sendMessage( Message("Hello ${credentials.username}") )
+        out.sendMessage( Message("$greeting ${credentials.username}") )
     }
 }

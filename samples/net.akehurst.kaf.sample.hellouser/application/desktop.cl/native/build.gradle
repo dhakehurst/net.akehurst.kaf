@@ -1,22 +1,8 @@
 
-kotlin {
-    targets {
-        fromPreset(presets.macosX64, 'macosX64') {
-            /* You can specify additional settings for the 'linux' target here */
-        }
-    }
-    sourceSets {
-        nativeCommonMain {
-            dependencies {
-                implementation project(":application.desktop.cl.common")
-            }
-        }
-        macosX64Main {
-            dependencies {
-                dependsOn nativeCommonMain
-            }
-        }
-    }
+dependencies {
+    commonMainImplementation project(":application.desktop.cl.common")
+
+    commonMainImplementation "net.akehurst.kaf:kaf-common:$version_kaf"
 }
 // to provide a gradle run for the native application
 

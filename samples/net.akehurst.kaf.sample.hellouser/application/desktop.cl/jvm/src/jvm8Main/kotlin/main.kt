@@ -20,8 +20,8 @@ import net.akehurst.kaf.sample.hellouser.application.desktop.cl.common.DesktopAp
 
 object Main {
     @JvmStatic
-    fun main(args : Array<String>) {
+    fun main(args: Array<String>) {
         val application = DesktopApplication()
-        application.af.start("")
+        application.af.start(args.toList())
     }
 }

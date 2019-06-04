@@ -1,9 +1,4 @@
-kotlin {
-    sourceSets {
-        commonMain {
-            dependencies {
-                api project(":computational.greeter.api")
-            }
-        }
-    }
+dependencies {
+    commonMainApi project(":computational.greeter.api")
+    commonMainImplementation "net.akehurst.kaf:kaf-service-configuration-api:$version_kaf"
 }

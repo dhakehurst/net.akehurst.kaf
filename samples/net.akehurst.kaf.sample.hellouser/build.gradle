@@ -48,6 +48,12 @@ subprojects {
     buildDir = new File(rootProject.projectDir, ".gradle-build/" + project.name)
 
     kotlin {
+        sourceSets {
+            nativeCommonMain
+            macosX64Main {
+                dependsOn nativeCommonMain
+            }
+        }
         targets {
             jvm('jvm8') {
                 compilations.all {
@@ -63,9 +69,7 @@ subprojects {
                     }
                 }
             }
-            //macosX64('macosX64') {
-            //    /* You can specify additional settings for the 'linux' target here */
-            //}
+            macosX64('macosX64')
         }
     }
     dependencies {

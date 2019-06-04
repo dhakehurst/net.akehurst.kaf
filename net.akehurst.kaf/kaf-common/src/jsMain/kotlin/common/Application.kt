@@ -34,13 +34,15 @@ actual class AFApplicationDefault(
         actual var terminate: () -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
-        actual val services: MutableMap<String, Service>
+        actual var defineServices: (commandLineArgs: List<String>) -> Map<String, Service>
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
-
+            set(value) {}
 
         actual fun build() : AFApplication {
             TODO("not implemented")
         }
+
+
     }
 
     override fun start(commandLineArgs: List<String>) {

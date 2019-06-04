@@ -1,17 +1,17 @@
-package net.akehurst.kaf.common
+package net.akehurst.kaf.service.commandLineHandler.clikt
 
+import com.github.ajalt.clikt.core.NoRunCliktCommand
 import net.akehurst.kaf.api.Active
 import net.akehurst.kaf.api.Application
 import net.akehurst.kaf.api.Composite
+import net.akehurst.kaf.common.afActive
+import net.akehurst.kaf.common.afApplication
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
-import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
-import net.akehurst.kaf.service.configuration.api.configuredValue
-import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggerConsole
 import kotlin.test.Test
-
+import com.github.ajalt.clikt.parameters.options.option
 
 class test_Application {
 
@@ -19,8 +19,7 @@ class test_Application {
 
         @Composite
         val comp = object : Active {
-            val confGreeting:String by configuredValue("configuration", "greeting") { "unknown" }
-            val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { confGreeting }
+            val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { "unknown" }
 
             override  val af = afActive(this, "comp") {
                 execute = {
@@ -33,10 +32,10 @@ class test_Application {
             defineServices = { commandLineArgs ->
                 mapOf(
                         "logger" to LoggerConsole(LogLevel.ALL),
-                        "configuration" to ConfigurationMap(mutableMapOf(
-                                "greeting" to "Hello World!"
-                        )),
-                        "cmdLineHandler" to CommandLineHandlerSimple(commandLineArgs)
+                        "cmdLineHandler" to CommandLineHandlerClikt(
+                                commandLineArgs,
+                                NoRunCliktCommand(name="test")
+                        )
                 )
             }
             execute = {
@@ -47,11 +46,18 @@ class test_Application {
 
 
     @Test
-    fun test() {
+    fun help() {
 
         val sut = TestApplication("sut")
-        sut.af.start(listOf("--greeting='Hello Jim'"))
+        sut.af.start(listOf("--help"))
 
     }
 
+    @Test
+    fun greeting() {
+
+        val sut = TestApplication("sut")
+        sut.af.start(listOf("--greeting=hi"))
+
+    }
 }

@@ -11,7 +11,7 @@ expect class AFApplicationDefault : AFApplication {
         var initialise: () -> Unit
         var execute: () -> Unit
         var terminate: () -> Unit
-        val services: MutableMap<String, Service>
+        var defineServices: (commandLineArgs:List<String>) -> Map<String, Service>
         fun build(): AFApplication
     }
 }
