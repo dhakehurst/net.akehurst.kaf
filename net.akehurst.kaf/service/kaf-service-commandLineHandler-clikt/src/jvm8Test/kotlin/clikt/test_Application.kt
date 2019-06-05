@@ -3,7 +3,7 @@ package net.akehurst.kaf.service.commandLineHandler.clikt
 import com.github.ajalt.clikt.core.NoRunCliktCommand
 import net.akehurst.kaf.api.Active
 import net.akehurst.kaf.api.Application
-import net.akehurst.kaf.api.Composite
+import net.akehurst.kaf.api.CompositePart
 import net.akehurst.kaf.common.afActive
 import net.akehurst.kaf.common.afApplication
 
@@ -11,13 +11,12 @@ import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggerConsole
 import kotlin.test.Test
-import com.github.ajalt.clikt.parameters.options.option
 
 class test_Application {
 
     class TestApplication(id:String) : Application {
 
-        @Composite
+        @CompositePart
         val comp = object : Active {
             val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { "unknown" }
 

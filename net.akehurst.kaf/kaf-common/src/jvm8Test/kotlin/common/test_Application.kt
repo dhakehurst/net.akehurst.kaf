@@ -2,7 +2,7 @@ package net.akehurst.kaf.common
 
 import net.akehurst.kaf.api.Active
 import net.akehurst.kaf.api.Application
-import net.akehurst.kaf.api.Composite
+import net.akehurst.kaf.api.CompositePart
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
@@ -17,7 +17,7 @@ class test_Application {
 
     class TestApplication(id:String) : Application {
 
-        @Composite
+        @CompositePart
         val comp = object : Active {
             val confGreeting:String by configuredValue("configuration", "greeting") { "unknown" }
             val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { confGreeting }

@@ -18,11 +18,10 @@ package net.akehurst.kaf.sample.hellouser.application.desktop.cl.common
 
 
 import net.akehurst.kaf.api.Application
-import net.akehurst.kaf.api.Composite
+import net.akehurst.kaf.api.CompositePart
 import net.akehurst.kaf.common.afApplication
 import net.akehurst.kaf.sample.hellouser.computational.greeter.simple.GreeterSimple
 import net.akehurst.kaf.service.commandLineHandler.clikt.CommandLineHandlerClikt
-import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggerConsole
@@ -34,15 +33,15 @@ class DesktopApplication : Application {
     // --- services ---
 
     //--- computational ---
-    @Composite
+    @CompositePart
     val greeter = GreeterSimple("greeter")
 
     //--- engineering ---
-    @Composite
+    @CompositePart
     val user2cl = Greeter2Cl("user2cl")
 
     //--- technology ---
-    @Composite
+    @CompositePart
     val console = ConsoleSimple("console")
 
     override val af = afApplication(this, "desktop") {

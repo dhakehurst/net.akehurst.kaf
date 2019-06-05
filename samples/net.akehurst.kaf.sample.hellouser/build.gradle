@@ -49,9 +49,17 @@ subprojects {
 
     kotlin {
         sourceSets {
-            nativeCommonMain
+            nativeCommonMain {
+                dependsOn commonMain
+            }
+            nativeCommonTest {
+                dependsOn commonTest
+            }
             macosX64Main {
                 dependsOn nativeCommonMain
+            }
+            macosX64Test {
+                dependsOn nativeCommonTest
             }
         }
         targets {

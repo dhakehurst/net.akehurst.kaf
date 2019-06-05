@@ -5,7 +5,6 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.isSuperclassOf
 
 
 class ApplicationCompositionWalker {
@@ -23,7 +22,7 @@ class ApplicationCompositionWalker {
     private fun _walkDepthFirst(self:Any, func:(obj:Any, property:KProperty<*>)->Unit) {
         self::class.members.filter { it is KProperty<*> }.forEach { property ->
             if (property is KProperty<*>) {
-                val annotation = property.findAnnotation<Composite>()
+                val annotation = property.findAnnotation<CompositePart>()
                 if (null!=annotation || property.returnType.isSubtypeOf(AFIdentifiable::class.createType())) {
                     val composite = property.getter.call(self)
                     if (null!=composite) {
