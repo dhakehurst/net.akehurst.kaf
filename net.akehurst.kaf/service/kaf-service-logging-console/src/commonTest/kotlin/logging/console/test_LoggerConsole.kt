@@ -8,7 +8,8 @@ class test_LoggerConsole {
     @Test
     fun test() {
 
-        val sut = LoggerConsole()
+        val ls = LoggingServiceConsole(LogLevel.ALL)
+        val sut = ls.create("sut")
 
         sut.log(LogLevel.FATAL, {"Fatal Message"})
         sut.log(LogLevel.ERROR, {"Error Message"})
@@ -22,7 +23,8 @@ class test_LoggerConsole {
     @Test
     fun test2() {
 
-        val sut = LoggerConsole(LogLevel.FATAL)
+        val ls = LoggingServiceConsole(LogLevel.INFO)
+        val sut = ls.create("sut")
 
         sut.log(LogLevel.FATAL, {"Fatal Message"})
         sut.log(LogLevel.ERROR, {"Error Message"})

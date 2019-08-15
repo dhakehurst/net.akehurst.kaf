@@ -9,7 +9,7 @@ import net.akehurst.kaf.common.afApplication
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.logging.api.LogLevel
-import net.akehurst.kaf.service.logging.console.LoggerConsole
+import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import kotlin.test.Test
 
 class test_Application {
@@ -22,7 +22,7 @@ class test_Application {
 
             override  val af = afActive(this, "comp") {
                 execute = {
-                    self.af.logger.log(LogLevel.INFO, {greeting})
+                    self.af.log.info {greeting}
                 }
             }
         }
@@ -30,7 +30,7 @@ class test_Application {
         override val af = afApplication(this, id) {
             defineServices = { commandLineArgs ->
                 mapOf(
-                        "logger" to LoggerConsole(LogLevel.ALL),
+                        "logger" to LoggingServiceConsole(LogLevel.ALL),
                         "cmdLineHandler" to CommandLineHandlerClikt(
                                 commandLineArgs,
                                 NoRunCliktCommand(name="test")

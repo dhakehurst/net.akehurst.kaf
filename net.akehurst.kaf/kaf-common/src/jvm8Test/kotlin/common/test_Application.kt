@@ -9,7 +9,7 @@ import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimp
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
-import net.akehurst.kaf.service.logging.console.LoggerConsole
+import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import kotlin.test.Test
 
 
@@ -24,7 +24,7 @@ class test_Application {
 
             override  val af = afActive(this, "comp") {
                 execute = {
-                    self.af.logger.log(LogLevel.INFO, {greeting})
+                    self.af.log.info {greeting}
                 }
             }
         }
@@ -32,7 +32,7 @@ class test_Application {
         override val af = afApplication(this, id) {
             defineServices = { commandLineArgs ->
                 mapOf(
-                        "logger" to LoggerConsole(LogLevel.ALL),
+                        "logging" to LoggingServiceConsole(LogLevel.ALL),
                         "configuration" to ConfigurationMap(mutableMapOf(
                                 "greeting" to "Hello World!"
                         )),

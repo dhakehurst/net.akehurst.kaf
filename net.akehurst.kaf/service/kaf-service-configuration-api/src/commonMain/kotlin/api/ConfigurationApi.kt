@@ -9,7 +9,7 @@ interface Configuration : Service {
     fun <T> get(path:String, default:()->T):T
 }
 
-inline fun <T : Any> configuredValue(configurationServiceName:String, path: String, noinline default:()->T): ConfiguredValue<T> {
+fun <T : Any> configuredValue(configurationServiceName:String, path: String, default:()->T): ConfiguredValue<T> {
     return ConfiguredValue<T>(configurationServiceName, path, default)
 }
 

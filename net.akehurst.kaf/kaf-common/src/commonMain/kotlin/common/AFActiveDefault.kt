@@ -4,7 +4,7 @@ import net.akehurst.kaf.api.AFActive
 import net.akehurst.kaf.api.Active
 
 
-inline fun afActive(self:Active, id: String, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
+inline fun afActive(self: Active, id: String, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
     val builder = AFActiveDefault.Builder(self, id)
     builder.init()
     return builder.build()
@@ -17,7 +17,7 @@ open class AFActiveDefault(
         val terminate: () -> Unit
 ) : AFBase(afIdentity), AFActive {
 
-    class Builder(val self:Active, val id: String) {
+    class Builder(val self: Active, val id: String) {
         var initialise: () -> Unit = {}
         var execute: () -> Unit = {}
         var terminate: () -> Unit = {}
@@ -28,15 +28,18 @@ open class AFActiveDefault(
 
 
     override fun start() {
+        log.trace { "start" }
         this.initialise()
         this.execute()
     }
 
     override fun join() {
+        log.trace { "join" }
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun stop() {
+        log.trace { "stop" }
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

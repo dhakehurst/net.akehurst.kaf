@@ -4,7 +4,7 @@ import net.akehurst.kaf.service.logging.api.Logger
 
 interface AFIdentifiable {
     val identity: String
-    val logger: Logger
+    val log: Logger
 }
 interface Identifiable {
     val af:AFIdentifiable
@@ -15,16 +15,23 @@ interface AFActive : AFIdentifiable {
     fun join()
     fun stop()
 }
-interface Active {
-    val af:AFActive
+interface Active : Identifiable {
+    override val af:AFActive
 }
 
-interface AFComponent : AFActive
-interface Component
+interface Port {
+
+}
+interface AFComponent : AFActive {
+    val ports : Set<Port>
+}
+interface Component : Active {
+    override val af: AFComponent
+}
 
 interface AFApplication : AFComponent {
     fun start(commandLineArgs: List<String>)
 }
-interface Application {
-    val af: AFApplication
+interface Application : Component {
+    override val af: AFApplication
 }

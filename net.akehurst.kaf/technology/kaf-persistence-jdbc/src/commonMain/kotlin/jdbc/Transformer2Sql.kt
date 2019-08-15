@@ -45,9 +45,10 @@ class KClass2CreateTableStatement : BinaryRule<KClass<*>, String> {
 
     override fun constructLeft2Right(left: KClass<*>, transformer: BinaryTransformer): String {
         val name: String = left.simpleName ?: throw Exception("Cannot get name of type") //TODO: better exception
-        val properties = left.members.filterIsInstance<KProperty<*>>()
-        val propertyList = transformer.transformAllLeft2Right(KProperty2SqlCreateColumnString::class, properties)
-        return "CREATE TABLE IF NOT EXISTS $name ( ${propertyList.joinToString(", ")} )";
+        //val properties = left.members.filterIsInstance<KProperty<*>>()
+        //val propertyList = transformer.transformAllLeft2Right(KProperty2SqlCreateColumnString::class, properties)
+        ///return "CREATE TABLE IF NOT EXISTS $name ( ${propertyList.joinToString(", ")} )";
+        TODO()
     }
 
     override fun constructRight2Left(right: String, transformer: BinaryTransformer): KClass<*> {
@@ -68,16 +69,18 @@ class KProperty2SqlCreateColumnString : BinaryRule<KProperty<*>, String> {
     override fun isAMatch(left: KProperty<*>, right: String, transformer: BinaryTransformer): Boolean = true
 
     override fun isValidForLeft2Right(left: KProperty<*>, transformer: BinaryTransformer): Boolean {
-        return null!=left.returnType.classifier && left.returnType.classifier is KClass<*>
+        //return null!=left.returnType.classifier && left.returnType.classifier is KClass<*>
+        TODO()
     }
 
     override fun isValidForRight2Left(right: String, transformer: BinaryTransformer): Boolean = TODO("not implemented")
 
     override fun constructLeft2Right(left: KProperty<*>, transformer: BinaryTransformer): String {
         val colname = left.name
-        val classifier = left.returnType.classifier ?: throw TransformException("")
-        val type = transformer.transformLeft2Right(PrimitiveType2SqlType::class, classifier as KClass<*>)
-        return "$colname ${type.name}"
+        //val classifier = left.returnType.classifier ?: throw TransformException("")
+        //val type = transformer.transformLeft2Right(PrimitiveType2SqlType::class, classifier as KClass<*>)
+       // return "$colname ${type.name}"
+        TODO()
     }
 
     override fun constructRight2Left(right: String, transformer: BinaryTransformer): KProperty<*> {
@@ -147,7 +150,7 @@ class Any2InsertStatement : BinaryRule<Pair<KClass<*>,Any>, String> {
 
     override fun constructLeft2Right(left: Pair<KClass<*>,Any>, transformer: BinaryTransformer): String {
         val tablename = left.first.simpleName ?: TransformException("KClass of left object must have a simpleName")
-        val colValues = left.first.members.filterIsInstance<KProperty<*>>().map {
+        /*val colValues = left.first.members.filterIsInstance<KProperty<*>>().map {
             val value = it.call(left.second)
             val sqlValue = when (value) {
                 is String -> "'$value'"
@@ -158,6 +161,8 @@ class Any2InsertStatement : BinaryRule<Pair<KClass<*>,Any>, String> {
         val colNames = colValues.map { it.first }
         val values = colValues.map { it.second }
         return "INSERT INTO $tablename ( ${colNames.joinToString(", ")} ) VALUES ( ${values.joinToString(", ")} )"
+         */
+        TODO()
     }
 
     override fun constructRight2Left(right: String, transformer: BinaryTransformer): Pair<KClass<*>,Any> {

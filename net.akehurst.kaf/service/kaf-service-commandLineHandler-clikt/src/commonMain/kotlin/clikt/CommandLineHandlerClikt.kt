@@ -33,25 +33,30 @@ class CommandLineHandlerClikt(
     }
 
     override fun <T : Any> registerOption(path: String, type: KClass<T>, default: T?, description: String, hidden: Boolean) {
-        this._clikt.registerOption(
-                OptionWithValues<T?, Any, Any>(
-                        names = setOf("--$path"),
-                        metavarWithDefault = ValueWithDefault("the greeting", default.toString()),
-                        nvalues = 1,
-                        help = description,
-                        hidden = hidden,
-                        helpTags = emptyMap(),
-                        envvar = null,
-                        envvarSplit = ValueWithDefault(null, Regex("\\s+")),
-                        valueSplit = null,
-                        parser = OptionWithValuesParser,
-                        completionCandidates = CompletionCandidates.None,
-                        transformValue = { it },
-                        transformEach = { it.single() },
-                        transformAll = { it.lastOrNull() as T? },
-                        transformValidator = {}
-                )
+        val existing = this._clikt.findOption(path)
+        if (null==existing) {
+            this._clikt.registerOption(
+                    OptionWithValues<T?, Any, Any>(
+                            names = setOf("--$path"),
+                            metavarWithDefault = ValueWithDefault("the greeting", default.toString()),
+                            nvalues = 1,
+                            help = description,
+                            hidden = hidden,
+                            helpTags = emptyMap(),
+                            envvar = null,
+                            envvarSplit = ValueWithDefault(null, Regex("\\s+")),
+                            valueSplit = null,
+                            parser = OptionWithValuesParser,
+                            completionCandidates = CompletionCandidates.None,
+                            transformValue = { it },
+                            transformEach = { it.single() },
+                            transformAll = { it.lastOrNull() as T? },
+                            transformValidator = {}
+                    )
 
-        )
+            )
+        } else {
+            // TODO: check everything is the same as what is already registered
+        }
     }
 }
