@@ -33,7 +33,7 @@ data class CypherNodeMerge(
     val properties = mutableListOf<CypherProperty>()
     override fun toCypher() : String {
         val propertyStr = this.properties.map { it.toCypher() }.joinToString(", ")
-        return "MERGE (:$label{$propertyStr})"
+        return "MERGE (:`$label`{$propertyStr})"
     }
 }
 
@@ -143,7 +143,7 @@ class PersistentStoreNeo4j(
             objectBegin { key, info, obj, datatype ->
                 af.log.debug { "walk: objectBegin: $key, $info" }
                 val path = if (key == KompositeWalker.ROOT) info.path else info.path + key.toString()
-                val obj = CypherNodeMerge(datatype.name)
+                val obj = CypherNodeMerge(datatype.qualifiedName("."))
                 currentObjStack.push(obj)
                 WalkInfo(path, obj)
             }
