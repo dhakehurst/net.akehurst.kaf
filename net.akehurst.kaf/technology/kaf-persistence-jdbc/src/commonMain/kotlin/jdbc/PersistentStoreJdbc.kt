@@ -8,7 +8,7 @@ class JdbcPersistenceException : PersistenceException {
     constructor(message:String) : super(message)
 }
 
-expect class JdbcConnection(settings: Map<String, String>) {
+expect class JdbcConnection(settings: Map<String, Any>) {
     fun execute(sqlStatements:List<String>)
 }
 
@@ -24,7 +24,7 @@ class PersistentStoreJdbc  : PersistentStore {
     internal lateinit var connection : JdbcConnection
     internal lateinit var transformer : Transformer2Sql
 
-    override fun configure(settings: Map<String, String>) {
+    override fun configure(settings: Map<String, Any>) {
         this.connection = JdbcConnection(settings)
         this.transformer = Transformer2Sql(settings)
     }

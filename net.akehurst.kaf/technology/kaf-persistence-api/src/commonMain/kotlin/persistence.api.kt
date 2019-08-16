@@ -9,7 +9,7 @@ open class PersistenceException : Exception {
 
 interface PersistentStore {
 
-    fun configure(settings:Map<String, String>)
+    fun configure(settings:Map<String, Any>)
 
     fun <T : Any> create(identity: String, type: KClass<T>, item: T)
     fun <T : Any> createAll(identity: String, type: KClass<T>, items: Set<T>)

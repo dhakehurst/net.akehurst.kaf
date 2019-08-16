@@ -132,7 +132,7 @@ actual class AFApplicationDefault(
                     val ref = (property as KProperty1<Any, Any>).getDelegate(obj) as ConfiguredValue<Any>
                     if (services.containsKey(ref.configurationServiceName) && services[ref.configurationServiceName] is Configuration) {
                         ref.configuration = services[ref.configurationServiceName] as Configuration
-                        val value: Any = ref.configuration.get(ref.path, ref.default)
+                        val value: Any = ref.getValue(obj, property)//configuration.get(ref.path, ref.default)
                         log().debug { "${this.identity}.${property.name} = ${value}" }
                     } else {
                         throw ApplicationInstantiationException("Cannot find a Configuration service named ${ref.configurationServiceName}, at ${this.identity}.${property.name}")
@@ -151,7 +151,7 @@ actual class AFApplicationDefault(
                 if ((property as KProperty1<Any, Any>).getDelegate(obj) is CommandLineValue<*>) {
                     val ref = (property as KProperty1<Any, Any>).getDelegate(obj) as CommandLineValue<Any>
                     if (services.containsKey(ref.handlerServiceName) && services[ref.handlerServiceName] is CommandLineHandler) {
-                        ref.setHandlerAndRegister( services[ref.handlerServiceName] as CommandLineHandler)
+                        ref.setHandlerAndRegister( "${this.identity}.${property.name}", services[ref.handlerServiceName] as CommandLineHandler)
                         log().debug { "${this.identity}.${property.name} = ${ref.handlerServiceName}[${ref.path}]" }
                     } else {
                         throw ApplicationInstantiationException("Cannot find a CommandLineHandler service named ${ref.handlerServiceName}, at ${this.identity}.${property.name}")

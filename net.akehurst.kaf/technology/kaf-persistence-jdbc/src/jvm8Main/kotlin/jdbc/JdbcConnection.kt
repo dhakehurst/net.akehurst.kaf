@@ -8,13 +8,13 @@ import java.sql.Types
 import kotlin.reflect.KClass
 
 
-actual class JdbcConnection actual constructor(val settings:Map<String,String>) {
+actual class JdbcConnection actual constructor(val settings:Map<String,Any>) {
 
     val db by lazy {
-        val cs = settings[PersistentStoreJdbc.URL] ?: throw PersistenceException("a jdbc 'url' must be provided in the configuration settings")
-        val driver = settings[PersistentStoreJdbc.DRIVER] ?: throw PersistenceException("a 'driver' name must be provided in the configuration settings")
-        val user = settings[PersistentStoreJdbc.USER] ?: ""
-        val password = settings[PersistentStoreJdbc.PASSWORD] ?: ""
+        val cs = settings[PersistentStoreJdbc.URL] as String? ?: throw PersistenceException("a jdbc 'url' must be provided in the configuration settings")
+        val driver = settings[PersistentStoreJdbc.DRIVER] as String? ?: throw PersistenceException("a 'driver' name must be provided in the configuration settings")
+        val user = settings[PersistentStoreJdbc.USER] as String? ?: ""
+        val password = settings[PersistentStoreJdbc.PASSWORD] as String? ?: ""
         Database.connect(url = cs, driver = driver, user = user, password = password)
     }
 

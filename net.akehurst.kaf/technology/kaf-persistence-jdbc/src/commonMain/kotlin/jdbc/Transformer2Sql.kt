@@ -9,7 +9,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 
-class Transformer2Sql(val settings: Map<String, String>) : BinaryTransformerAbstract() {
+class Transformer2Sql(val settings: Map<String, Any>) : BinaryTransformerAbstract() {
     init {
         super.registerRule(KClass2CreateTableStatement::class)
         super.registerRule(KProperty2SqlCreateColumnString::class)

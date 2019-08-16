@@ -19,8 +19,8 @@ class test_Application {
 
         @CompositePart
         val comp = object : Active {
-            val confGreeting:String by configuredValue("configuration", "greeting") { "unknown" }
-            val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { confGreeting }
+            val confGreeting:String by configuredValue("configuration") { "unknown" }
+            val greeting:String? by commandLineValue("cmdLineHandler") { confGreeting }
 
             override  val af = afActive(this, "comp") {
                 execute = {
