@@ -1,7 +1,6 @@
 package net.akehurst.kaf.service.api
 
 import kotlin.properties.ReadOnlyProperty
-import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 interface Service {

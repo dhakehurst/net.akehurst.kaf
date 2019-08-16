@@ -40,6 +40,6 @@ open class AFActiveDefault(
 
     override fun stop() {
         log.trace { "stop" }
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        this.terminate()
     }
 }

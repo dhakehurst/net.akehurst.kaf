@@ -3,7 +3,7 @@ package net.akehurst.kaf.technology.persistence.api
 import kotlin.reflect.KClass
 
 
-open class PersistenceException : Exception {
+open class PersistenceException : RuntimeException {
     constructor(message:String) : super(message)
 }
 
