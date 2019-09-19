@@ -3,6 +3,7 @@ val version_kxreflect:String by project
 
 val version_neo4j: String by project
 val version_neo4j_driver: String by project
+val version_agl: String by project
 
 dependencies {
 
@@ -25,6 +26,7 @@ dependencies {
 
     // because IntelliJ can't seem to resolve runtime transitive dependencies correctly!!
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-api:$version_komposite")
-    jvm8MainImplementation("net.akehurst.kotlin.komposite:komposite-processor-jvm8:$version_komposite")
+    commonMainImplementation("net.akehurst.kotlin.komposite:komposite-processor:$version_komposite")
+    commonTestImplementation("net.akehurst.language:agl-processor:$version_agl")
 }
 

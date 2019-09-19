@@ -1,5 +1,6 @@
 package net.akehurst.kaf.technology.persistence.jdbc
 
+import net.akehurst.kaf.technology.persistence.api.Filter
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import kotlin.reflect.KClass
@@ -29,28 +30,28 @@ class PersistentStoreJdbc  : PersistentStore {
         this.transformer = Transformer2Sql(settings)
     }
 
-    override fun <T : Any> create(identity: String, type: KClass<T>, item: T) {
+    override fun <T : Any> create(type: KClass<T>, item: T) {
         val sqlStatements = this.transformer.transform2CreateItem(type, item)
         this.connection.execute(sqlStatements)
     }
 
-    override fun <T : Any> createAll(identity: String, type: KClass<T>, items: Set<T>) {
+    override fun <T : Any> createAll(type: KClass<T>, items: Set<T>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> read(identity: String, type: KClass<T>): T {
+    override fun <T : Any> read(type: KClass<T>, filterSet: Set<Filter>): T {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> readAll(identity: String, type: KClass<T>): Set<T> {
+    override fun <T : Any> readAll(type: KClass<T>, filterSet: Set<Filter>): Set<T> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> update(identity: String, type: KClass<T>, item: T) {
+    override fun <T : Any> update(type: KClass<T>, item: T, filterSet: Set<Filter>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> updateAll(identity: String, type: KClass<T>, items: Set<T>) {
+    override fun <T : Any> updateAll(type: KClass<T>, items: Set<T>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

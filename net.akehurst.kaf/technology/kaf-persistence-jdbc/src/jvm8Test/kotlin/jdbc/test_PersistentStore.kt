@@ -15,7 +15,7 @@ class test_PersistentStore {
 
         val p1 = Contact("dave", "David", "dave@email.adddess", "+0123456789")
 
-        sut.create(p1.alias, Contact::class, p1)
+        sut.create(Contact::class, p1)
 
     }
 

@@ -6,10 +6,9 @@ import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimp
 import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
+import net.akehurst.kaf.technology.persistence.api.FilterProperty
 import java.nio.file.Files
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
+import kotlin.test.*
 
 class test_PersystentStoreNeo4j : Application {
 
@@ -30,7 +29,7 @@ class test_PersystentStoreNeo4j : Application {
             mapOf(
                     "logging" to LoggingServiceConsole(LogLevel.ALL),
                     "configuration" to ConfigurationMap(mutableMapOf(
-                            "sut.embeddedNeo4jDirectory" to tempDir.name
+                            "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
                     )),
                     "cmdLineHandler" to CommandLineHandlerSimple(commandLineArgs)
             )
@@ -48,7 +47,10 @@ class test_PersystentStoreNeo4j : Application {
     fun shutdown() {
         this.sut.af.stop()
         this.af.stop()
-        tempDir.deleteRecursively()
+        while (tempDir.exists()) {
+            println("deleting ${tempDir.absoluteFile}")
+            tempDir.deleteRecursively()
+        }
     }
 
     @Test
@@ -67,7 +69,35 @@ class test_PersystentStoreNeo4j : Application {
         this.configure()
 
         val a = A("a")
-        sut.create("obj", A::class, a)
+        sut.create(A::class, a)
     }
 
+    @Test
+    fun createAll() {
+        this.configure()
+
+        val a1 = A("a1")
+        val a2 = A("a2")
+        val a3 = A("a3")
+        val a4 = A("a4")
+        val setOfA = setOf(a1, a2, a3, a4)
+        sut.createAll(A::class, setOfA)
+    }
+
+    @Test
+    fun read() {
+        // given
+        this.configure()
+        val a = A("a")
+        sut.create(A::class, a)
+
+        // when
+        val filter = FilterProperty("prop", "a")
+        val actual = sut.read(A::class, setOf(filter))
+
+        // then
+        val expected = a
+        assertNotNull(actual)
+        assertEquals(expected, actual)
+    }
 }

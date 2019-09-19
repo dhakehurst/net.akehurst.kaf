@@ -24,7 +24,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 plugins {
-    kotlin("multiplatform") version("1.3.41") apply false
+    kotlin("multiplatform") version("1.3.50") apply false
     id("com.jfrog.bintray") version("1.8.4") apply false
 }
 
@@ -133,8 +133,8 @@ subprojects {
             repo = "maven"
             name = "${rootProject.name}"
             userOrg = user
-            websiteUrl = "https://github.com/dhakehurst/net.akehurst.kotlin.kserialisation"
-            vcsUrl = "https://github.com/dhakehurst/net.akehurst.kotlin.kserialisation"
+            websiteUrl = "https://github.com/dhakehurst/net.akehurst.kaf"
+            vcsUrl = "https://github.com/dhakehurst/net.akehurst.kaf"
             setLabels("kotlin")
             setLicenses("Apache-2.0")
         })

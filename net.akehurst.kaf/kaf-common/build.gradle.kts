@@ -6,7 +6,7 @@ dependencies {
     commonMainApi(project(":kaf-service-configuration-api"))
     commonMainApi(project(":kaf-service-commandLineHandler-api"))
 
-    jvm8MainApi("org.jetbrains.kotlin:kotlin-reflect:${version_kotlin}")
+    jvm8MainApi(kotlin("reflect"))
 
     commonTestImplementation(project(":kaf-service-logging-console"))
     commonTestImplementation(project(":kaf-service-configuration-map"))

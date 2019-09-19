@@ -18,11 +18,11 @@ class test_Application {
 
         @CompositePart
         val comp = object : Active {
-            val greeting:String? by commandLineValue("cmdLineHandler", "greeting") { "unknown" }
+            val greeting:String? by commandLineValue("cmdLineHandler") { "greeting"}
 
             override  val af = afActive(this, "comp") {
                 execute = {
-                    self.af.log.info {greeting}
+                    self.af.log.info { greeting }
                 }
             }
         }
@@ -30,7 +30,7 @@ class test_Application {
         override val af = afApplication(this, id) {
             defineServices = { commandLineArgs ->
                 mapOf(
-                        "logger" to LoggingServiceConsole(LogLevel.ALL),
+                        "logging" to LoggingServiceConsole(LogLevel.ALL),
                         "cmdLineHandler" to CommandLineHandlerClikt(
                                 commandLineArgs,
                                 NoRunCliktCommand(name="test")
