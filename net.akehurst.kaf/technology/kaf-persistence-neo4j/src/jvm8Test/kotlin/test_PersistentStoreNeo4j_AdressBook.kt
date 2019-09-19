@@ -85,30 +85,46 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 
     @Test
     fun create_Contact_empty() {
+        // given
         this.configure()
-
         val c = Contact("adam")
+
+        //when
         sut.create(Contact::class, c)
+
+        //then
+        //TODO
     }
 
     @Test
     fun create_Contact_1() {
+        // given
         this.configure()
-
         val c = Contact("adam")
-        c.name = "Adam"
+        c.name = "Adam Ant"
         c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+
+        //when
         sut.create(Contact::class, c)
+
+        //then
+        //TODO
     }
 
     @Test
     fun create_Contact_2() {
+        //given
         this.configure()
-
         val c = Contact("adam")
-        c.name = "Adam"
+        c.name = "Adam Ant"
         c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+        c.emails = listOf("adam@pop.com", "adam.ant@pop.com")
+
+        //when
         sut.create(Contact::class, c)
+
+        //then
+        //TODO
     }
 
     @Test
