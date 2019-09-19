@@ -1,5 +1,8 @@
 package net.akehurst.kaf.technology.persistence.neo4j
 
+import com.soywiz.klock.DateTime
+import com.soywiz.klock.Month
+import com.soywiz.klock.Year
 import net.akehurst.kaf.api.Application
 import net.akehurst.kaf.common.afApplication
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
@@ -7,16 +10,32 @@ import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import net.akehurst.kaf.technology.persistence.api.FilterProperty
-import java.nio.file.Files
 import kotlin.test.*
 
-class test_PersystentStoreNeo4j : Application {
+class test_PersystentStoreNeo4j_AddressBook : Application {
 
     companion object {
         val KOMPOSITE = """
+            namespace com.soywiz.klock {
+                primitive DateTime
+            }
             namespace net.akehurst.kaf.technology.persistence.neo4j {
-                datatype A {
-                  val prop : String
+                datatype AddressBook {
+                  val  title : String
+                  car  contacts : Map<String, Contact>
+                }
+                datatype Contact {
+                  val  alias : String
+                  var  name : String
+                  var  email : String
+                  var  phone : Set<PhoneNumber>
+                  var  dateOfBirth : DateTime
+                  dis  age : TimeSpan
+                  var  friendsWith : Set<Contact>
+                }
+                datatype PhoneNumber {
+                  val label: String
+                  val number: String
                 }
             }
         """.trimIndent()
@@ -65,60 +84,65 @@ class test_PersystentStoreNeo4j : Application {
     }
 
     @Test
-    fun create() {
+    fun create_Contact_empty() {
         this.configure()
 
-        val a = A("a")
-        sut.create(A::class, a)
+        val c = Contact("adam")
+        sut.create(Contact::class, c)
     }
 
     @Test
-    fun createAll() {
+    fun create_Contact_1() {
         this.configure()
 
-        val a1 = A("a1")
-        val a2 = A("a2")
-        val a3 = A("a3")
-        val a4 = A("a4")
-        val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        val c = Contact("adam")
+        c.name = "Adam"
+        c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+        sut.create(Contact::class, c)
+    }
+
+    @Test
+    fun create_Contact_2() {
+        this.configure()
+
+        val c = Contact("adam")
+        c.name = "Adam"
+        c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+        sut.create(Contact::class, c)
+    }
+
+    @Test
+    fun create_AddressBook_empty() {
+        this.configure()
+
+        val abk = AddressBook("friends")
+        sut.create(AddressBook::class, abk)
+    }
+
+    @Test
+    fun create_AddressBook_containing_1() {
+        this.configure()
+
+        val abk = AddressBook("friends")
+        val c1 = Contact("adam")
+        abk.contacts.put(c1.alias, c1)
+
+        sut.create(AddressBook::class, abk)
     }
 
     @Test
     fun read() {
         // given
         this.configure()
-        val a = A("a")
-        sut.create(A::class, a)
+        val abk = AddressBook("friends")
+        sut.create(AddressBook::class, abk)
 
         // when
-        val filter = FilterProperty("prop", "a")
-        val actual = sut.read(A::class, setOf(filter))
+        val filter = FilterProperty("title", "friends")
+        val actual = sut.read(AddressBook::class, setOf(filter))
 
         // then
-        val expected = a
-        assertNotNull(actual)
-        assertEquals(expected, actual)
-    }
-
-    @Test
-    fun readAll() {
-        // given
-        this.configure()
-
-        val a1 = A("a1")
-        val a2 = A("a2")
-        val a3 = A("a3")
-        val a4 = A("a4")
-        val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
-
-        // when
-        val filter = FilterProperty("prop", "a")
-        val actual = sut.readAll(A::class, emptySet())
-
-        // then
-        val expected = setOfA
+        val expected = abk
         assertNotNull(actual)
         assertEquals(expected, actual)
     }

@@ -4,6 +4,7 @@ val version_kxreflect:String by project
 val version_neo4j: String by project
 val version_neo4j_driver: String by project
 val version_agl: String by project
+val version_klock: String by project
 
 dependencies {
 
@@ -23,6 +24,8 @@ dependencies {
     commonTestImplementation(project(":kaf-service-logging-console"))
     commonTestImplementation(project(":kaf-service-configuration-map"))
     commonTestImplementation(project(":kaf-service-commandLineHandler-simple"))
+    commonTestImplementation("com.soywiz.korlibs.klock:klock:$version_klock")
+    commonMainImplementation("com.soywiz.korlibs.klock:klock:$version_klock") //TODO: remove this when got primitive type mappers
 
     // because IntelliJ can't seem to resolve runtime transitive dependencies correctly!!
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-api:$version_komposite")
