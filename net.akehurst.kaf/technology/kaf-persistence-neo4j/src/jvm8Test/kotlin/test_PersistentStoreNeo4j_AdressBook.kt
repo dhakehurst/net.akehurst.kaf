@@ -48,7 +48,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
             mapOf(
                     "logging" to LoggingServiceConsole(LogLevel.ALL),
                     "configuration" to ConfigurationMap(mutableMapOf(
-                            "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
+//                            "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
                     )),
                     "cmdLineHandler" to CommandLineHandlerSimple(commandLineArgs)
             )
@@ -75,10 +75,12 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
     @Test
     fun configure() {
         this.sut.configure(mapOf(
-                "embedded" to true,
-                "uri" to "bolt://localhost:7777",
+//                "embedded" to true,
+//                "uri" to "bolt://localhost:7777",
+                "embedded" to false,
+                "uri" to "bolt://localhost:7687",
                 "user" to "neo4j",
-                "password" to "neo4j",
+                "password" to "admin",
                 "komposite" to KOMPOSITE
         ))
     }
@@ -147,7 +149,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
     }
 
     @Test
-    fun read() {
+    fun read_empty() {
         // given
         this.configure()
         val abk = AddressBook("friends")
@@ -161,5 +163,28 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val expected = abk
         assertNotNull(actual)
         assertEquals(expected, actual)
+        assertEquals(expected.title, actual.title)
+        assertEquals(expected.contacts, actual.contacts)
+    }
+
+    @Test
+    fun read_containing_1() {
+        // given
+        this.configure()
+        val abk = AddressBook("friends")
+        val c1 = Contact("adam")
+        abk.contacts.put(c1.alias, c1)
+        sut.create(AddressBook::class, abk)
+
+        // when
+        val filter = FilterProperty("title", "friends")
+        val actual = sut.read(AddressBook::class, setOf(filter))
+
+        // then
+        val expected = abk
+        assertNotNull(actual)
+        assertEquals(expected, actual)
+        assertEquals(expected.title, actual.title)
+        assertEquals(expected.contacts, actual.contacts)
     }
 }

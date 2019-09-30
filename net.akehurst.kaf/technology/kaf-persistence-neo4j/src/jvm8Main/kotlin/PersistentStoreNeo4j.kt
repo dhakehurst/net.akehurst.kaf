@@ -9,6 +9,7 @@ import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.Filter
 import net.akehurst.kaf.technology.persistence.api.FilterProperty
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
+import net.akehurst.kotlin.komposite.api.CollectionType
 import net.akehurst.kotlin.komposite.api.Datatype
 import net.akehurst.kotlin.komposite.common.*
 import net.akehurst.kotlinx.collections.Stack
@@ -21,12 +22,19 @@ import java.io.File
 
 interface CypherStatement {
     companion object {
-        val PATH_PROPERTY = "`#path`"
-        val COMPOSITE_PROPERTY = "`#isComposite`"
-        val ELEMENTS_PROPERTY = "`#elements`"
-        val ELEMENT_RELATION = "`#element`"
-        val KEY_RELATION = "`#key`"
-        val VALUE_RELATION = "`#value`"
+        val PATH_PROPERTY = "#path"
+        val COMPOSITE_PROPERTY = "#isComposite"
+        val ELEMENTS_PROPERTY = "#elements"
+        val ELEMENT_RELATION = "#element"
+        val SET_TYPE_LABEL = "#SET"
+        val LIST_TYPE_LABEL = "#LIST"
+
+        val MAP_TYPE_LABEL = "#MAP"
+        val ENTRY_RELATION = "#entry"
+        val MAPENTRY_TYPE_LABEL = "#MAPENTRY"
+        val KEY_PROPERTY = "#key"
+        val KEY_RELATION = "#key"
+        val VALUE_RELATION = "#value"
     }
 
     fun toCypherStatement(): String
@@ -74,16 +82,16 @@ data class CypherList(
 
     val isPrimitiveCollection get() = this._primitiveElements.isNotEmpty()
 
-    override val label = "#LIST"
+    override val label = CypherStatement.LIST_TYPE_LABEL
 
     fun addPrimitiveElement(element: CypherValue) = this._primitiveElements.add(element)
 
     override fun toCypherStatement(): String {
         return if (this.isPrimitiveCollection) {
             val elements = this._primitiveElements.map { it.toCypherString() }.joinToString(separator = ",", prefix = "[", postfix = "]")
-            "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path', ${CypherStatement.ELEMENTS_PROPERTY}:$elements})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
         } else {
-            "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path'})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
         }
     }
 }
@@ -96,15 +104,16 @@ data class CypherSet(
 
     val isPrimitiveCollection get() = this._primitiveElements.isNotEmpty()
 
-    override val label = "#SET"
+    override val label = CypherStatement.SET_TYPE_LABEL
 
     fun addPrimitiveElement(element: CypherValue) = this._primitiveElements.add(element)
 
     override fun toCypherStatement(): String {
         return if (this.isPrimitiveCollection) {
-            ""
+            val elements = this._primitiveElements.map { it.toCypherString() }.joinToString(separator = ",", prefix = "[", postfix = "]")
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
         } else {
-            "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path'})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
         }
     }
 }
@@ -113,44 +122,73 @@ data class CypherMap(
         override val path: String
 ) : CypherElement {
 
-    override val label = "#MAP"
+    override val label = CypherStatement.MAP_TYPE_LABEL
 
     override fun toCypherStatement(): String {
-        return "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path'})"
+        return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+    }
+}
+
+data class CypherMapEntry(
+        override val path: String
+) : CypherElement {
+
+    override val label = CypherStatement.MAPENTRY_TYPE_LABEL
+
+    var primitiveKey: CypherValue? = null
+    var primitiveValue: CypherValue? = null
+
+    override fun toCypherStatement(): String {
+        //TODO: primitive keys and values
+        if (null == this.primitiveKey) {
+            return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+        } else {
+            val kv = primitiveKey!!.toCypherString()
+            return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.KEY_PROPERTY}`:${kv} })"
+        }
     }
 }
 
 //TODO: needs id props to identify from and to or match path from root and root has id prop!
 class CypherReference(
-        val fromLabel: String,
-        val fromPath: String,
+        val srcLabel: String,
+        val srcPath: String,
         val relLabel: String,
-        val toLabel: String,
-        val toPath: String
+        val tgtLabel: String,
+        val tgtPath: String
 ) : CypherStatement {
 
     override fun toCypherStatement(): String {
-        return "MERGE (:`$fromLabel`{${CypherStatement.PATH_PROPERTY}:'$fromPath'})-[r:`$relLabel`]->(:`$toLabel`{${CypherStatement.PATH_PROPERTY}:'$toPath'})"
+        return """
+            MATCH (src:`$srcLabel`{`${CypherStatement.PATH_PROPERTY}`:'$srcPath'})
+            MATCH (tgt:`$tgtLabel`{`${CypherStatement.PATH_PROPERTY}`:'$tgtPath'})
+            MERGE (src)-[r:`$relLabel`]->(tgt)
+        """
+        //return "MERGE (:`$fromLabel`{`${CypherStatement.PATH_PROPERTY}`:'$fromPath'})-[r:`$relLabel`]->(:`$toLabel`{`${CypherStatement.PATH_PROPERTY}`:'$toPath'})"
     }
 }
 
 //TODO: needs id props to identify from and to or match path from root and root has id prop!
 class CypherComposite(
-        val fromLabel: String,
-        val fromId: String,
+        val srcLabel: String,
+        val srcPath: String,
         val relLabel: String,
-        val toLabel: String,
-        val toId: String
+        val tgtLabel: String,
+        val tgtPath: String
 ) : CypherStatement {
 
     override fun toCypherStatement(): String {
-        val idProps = ""
-        return "MERGE (:`$fromLabel`{${CypherStatement.PATH_PROPERTY}:'$fromId'})-[r:`$relLabel`{${CypherStatement.COMPOSITE_PROPERTY}=true}]->(:`$toLabel`{${CypherStatement.PATH_PROPERTY}:'$toId'})"
+        return """
+            MATCH (src:`$srcLabel`{`${CypherStatement.PATH_PROPERTY}`:'$srcPath'})
+            MATCH (tgt:`$tgtLabel`{`${CypherStatement.PATH_PROPERTY}`:'$tgtPath'})
+            MERGE (src)-[r:`$relLabel`{`${CypherStatement.COMPOSITE_PROPERTY}`:true}]->(tgt)
+        """
+        //return "MERGE (:`$fromLabel`{`${CypherStatement.PATH_PROPERTY}`:'$fromId'})-[r:`$relLabel`{`${CypherStatement.COMPOSITE_PROPERTY}`:true}]->(:`$toLabel`{`${CypherStatement.PATH_PROPERTY}`:'$toId'})"
     }
 }
 
 data class CypherProperty(val name: String, val value: CypherValue) {
-    fun toCypherString(): String = "${name}: ${value.toCypherString()}"
+    fun toCypherString(): String = "`${name}`: ${value.toCypherString()}"
 }
 
 data class CypherObject(
@@ -163,9 +201,9 @@ data class CypherObject(
     override fun toCypherStatement(): String {
         val propertyStr = this.properties.filter { null != it.value.value }.map { it.toCypherString() }.joinToString(", ")
         return if (propertyStr.isEmpty()) {
-            "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path'})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
         } else {
-            "MERGE (:`$label`{${CypherStatement.PATH_PROPERTY}:'$path', $propertyStr})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', $propertyStr})"
         }
     }
 }
@@ -178,10 +216,26 @@ data class CypherMatchNode(
     override fun toCypherStatement(): String {
         val propertyStr = this.properties.map { it.toCypherString() }.joinToString(", ")
         return if (propertyStr.isEmpty()) {
-            "MATCH ($nodeName:`$label`) RETURN $nodeName"
+            "MATCH (`$nodeName`:`$label`) RETURN `$nodeName`"
         } else {
-            "MATCH ($nodeName:`$label`{$propertyStr}) RETURN $nodeName"
+            "MATCH (`$nodeName`:`$label`{$propertyStr}) RETURN `$nodeName`"
         }
+    }
+
+    override fun toString(): String {
+        return this.toCypherStatement()
+    }
+}
+
+data class CypherMatchLink(
+        val srcLabel:String,
+        val srcNodeName:String,
+        val lnkLabel:String,
+        val tgtLabel:String,
+        val tgtNodeName:String
+) : CypherStatement {
+    override fun toCypherStatement(): String {
+        return "MATCH (`$srcNodeName`:`$srcLabel`)-[:`$lnkLabel`]-(`$tgtNodeName`:`$tgtLabel`) RETURN `$srcNodeName`, `$tgtNodeName`"
     }
 
     override fun toString(): String {
@@ -292,12 +346,41 @@ class PersistentStoreNeo4j(
                 WalkInfo(info.up, info.acc + stm)
             }
             mapEntryKeyEnd { path, info, entry ->
-                val cyKey = currentObjStack.pop()
+                //val cyKey = currentObjStack.pop()
                 WalkInfo(info.up, info.acc)
             }
             mapEntryValueEnd { path, info, entry ->
+                var acc = info.acc
                 val cyValue = currentObjStack.pop()
-                WalkInfo(info.up, info.acc)
+                val cyKey = currentObjStack.pop()
+                val cyMap = currentObjStack.peek() as CypherMap
+                val entryId = path.joinToString("/", "/$rootIdentity/")
+                val cyEntry = CypherMapEntry(entryId)
+                acc += cyEntry
+                val cyEntryRel = CypherReference(cyMap.label, cyMap.path, CypherStatement.ENTRY_RELATION, cyEntry.label, cyEntry.path)
+                acc += cyEntryRel
+                when (cyKey) {
+                    is CypherValue -> {
+                        cyEntry.primitiveKey = cyKey
+                    }
+                    is CypherElement -> {
+                        var el = CypherReference(cyEntry.label, cyEntry.path, CypherStatement.KEY_RELATION, cyKey.label, cyKey.path)
+                        acc += el
+                    }
+                    else -> throw PersistenceException("Collection element type ${cyKey::class.simpleName} is not supported")
+                }
+                when (cyValue) {
+                    is CypherValue -> {
+                        TODO()
+                        cyEntry.primitiveValue = cyValue
+                    }
+                    is CypherElement -> {
+                        var el = CypherReference(cyEntry.label, cyEntry.path, CypherStatement.VALUE_RELATION, cyValue.label, cyValue.path)
+                        acc += el
+                    }
+                    else -> throw PersistenceException("Collection element type ${cyValue::class.simpleName} is not supported")
+                }
+                WalkInfo(info.up, acc)
             }
             objectBegin { path, info, obj, datatype ->
                 af.log.debug { "walk: objectBegin: $path, $info" }
@@ -334,10 +417,22 @@ class PersistentStoreNeo4j(
                         acc += comp
                     }
                     is CypherSet -> {
-                        val set = value
+                        val parent = currentObjStack.peek() as CypherObject
+                        val comp = if (property.isComposite) {
+                            CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                        } else {
+                            CypherReference(parent.label, parent.path, property.name, value.label, value.path)
+                        }
+                        acc += comp
                     }
                     is CypherMap -> {
-                        val map = value
+                        val parent = currentObjStack.peek() as CypherObject
+                        val comp = if (property.isComposite) {
+                            CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                        } else {
+                            CypherReference(parent.label, parent.path, property.name, value.label, value.path)
+                        }
+                        acc += comp
                     }
                     is CypherReference -> {
                     }
@@ -361,10 +456,25 @@ class PersistentStoreNeo4j(
         return cypher
     }
 
-    private fun createCypherMatchStatements(datatype: Datatype, filterSet: Set<Filter>, rootNodeName: String): List<CypherStatement> {
-        val label = datatype.qualifiedName(".")
+    private fun createCypherMatchObject(objPathName:String, objDatatype: Datatype): List<CypherStatement> {
+        val objLabel = objDatatype.qualifiedName(".")
         //TODO: handle composition and reference!
-        val cypherStatement = CypherMatchNode(label, rootNodeName)
+        val cypherStatement = CypherMatchNode(objLabel, objPathName)
+        val composite = objDatatype.property.values.filter {
+            it.propertyType.isPrimitive.not()
+        }.map {
+            val childLabel = it.propertyType.qualifiedName(".")
+            val childNodeName = objPathName + "/${it.name}"
+            CypherMatchLink(objLabel, objPathName, it.name, childLabel, childNodeName)
+        }
+        return listOf(cypherStatement)
+    }
+
+    private fun createCypherMatchRootObject(datatype: Datatype, filterSet: Set<Filter>): List<CypherStatement> {
+        val rootLabel = datatype.qualifiedName(".")
+        val rootNodeName = "/" + (filterSet.first() as FilterProperty).value as String
+        //TODO: handle composition and reference!
+        val cypherStatement = CypherMatchNode(rootLabel, rootNodeName)
         filterSet.forEach { filter ->
             when (filter) {
                 is FilterProperty -> {
@@ -373,12 +483,30 @@ class PersistentStoreNeo4j(
                 else -> throw PersistenceException("Filter type ${filter::class.simpleName} is not yet supported")
             }
         }
+
         val composite = datatype.property.values.filter {
-            it.isPrimitive.not()
+            it.propertyType.isPrimitive.not()
         }.map {
-            CypherMatchLink()
+            val pt =  it.propertyType
+            val childLabel = when {
+                pt.isCollection -> {
+                    val pct = pt as CollectionType
+                    when {
+                        pct.isSet-> CypherStatement.SET_TYPE_LABEL
+                        pct.isList-> CypherStatement.LIST_TYPE_LABEL
+                        pct.isMap -> CypherStatement.MAP_TYPE_LABEL
+                        else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
+                    }
+                }
+                else -> pt.qualifiedName(".")
+            }
+            val childNodeName = rootNodeName + "/${it.name}"
+           // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
+            val match = CypherMatchNode(childLabel, childNodeName)
+            match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(childNodeName)))
+            match
         }
-        return listOf(cypherStatement)
+        return listOf(cypherStatement) + composite
     }
 
     private fun executeWriteCypher(cypherStatements: List<CypherStatement>) {
@@ -410,6 +538,10 @@ class PersistentStoreNeo4j(
         return records
     }
 
+    private fun recordsToPathMap(records:List<Record>) : Map<String,Value> {
+        return records.associate{ val key = it.keys().first(); Pair(key, it[key]) }
+    }
+
     fun convertValue(ts: TypeSystem, neo4jValue: Value): Any? {
         return when (neo4jValue.type()) {
             ts.NULL() -> null
@@ -424,19 +556,40 @@ class PersistentStoreNeo4j(
                 val unixMillis = dateTime.toInstant().toEpochMilli()
                 DateTime.fromUnix(unixMillis)
             }
+            ts.NODE() -> {
+                val node = neo4jValue.asNode()
+                when {
+                    node.hasLabel(CypherStatement.SET_TYPE_LABEL) -> convertSetNode()
+                    node.hasLabel(CypherStatement.LIST_TYPE_LABEL) -> convertListNode()
+                    node.hasLabel(CypherStatement.MAP_TYPE_LABEL) -> convertMapNode()
+                    else -> TODO()
+                }
+            }
             else -> throw PersistenceException("Neo4j value type ${neo4jValue.type()} is not yet supported")
         }
     }
 
+    fun convertSetNode() : Set<Any> {
+        return emptySet()
+    }
+
+    fun convertListNode() : List<Any> {
+        return emptyList()
+    }
+
+    fun convertMapNode() : Map<Any,Any> {
+        return emptyMap()
+    }
+
     private fun convertObjects(datatype: Datatype, records: List<Record>, nodeName: String): Set<Any> {
         return records.map {
-            this.convertObject(datatype, it, nodeName)
+       //     this.convertObject(datatype, it, nodeName)
         }.toSet()
     }
 
-    private fun convertObject(datatype: Datatype, record: Record, nodeName: String): Any {
+    private fun convertObject(datatype: Datatype, pathMap: Map<String,Value>, path: String): Any {
         val ts = this._neo4j.session().typeSystem()
-        val node = record[nodeName].asNode()
+        val node = pathMap[path]?.asNode() ?: throw PersistenceException("node $path not found")
         val idProps = datatype.identityProperties.map {
             val neo4jValue = node[it.name]
             //TODO: handel non primitive properties
@@ -452,7 +605,8 @@ class PersistentStoreNeo4j(
 
         // TODO: change this to enable nonExplicit properties, once JS reflection works
         datatype.explicitNonIdentityProperties.forEach {
-            val neo4jValue = record[it.name]
+            val ppath = "$path/${it.name}"
+            val neo4jValue = pathMap[ppath]
             if (null != neo4jValue) {
                 val value = this.convertValue(ts, neo4jValue)
                 it.set(obj, value)
@@ -531,18 +685,21 @@ class PersistentStoreNeo4j(
     override fun <T : Any> read(type: KClass<T>, filterSet: Set<Filter>): T {
         af.log.trace { "read(${type.simpleName}, $filterSet)" }
         val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val cypherStatements = this.createCypherMatchStatements(dt, filterSet, "item")
+        val cypherStatements = this.createCypherMatchRootObject(dt, filterSet)
         val records = this.executeReadCypher(cypherStatements)
-        val item = this.convertObject(dt, records[0], "item")
+        val pathMap = recordsToPathMap(records)
+        val rootNodeName = records[0].keys().first()
+        val item = this.convertObject(dt, pathMap, rootNodeName)
         return item as T
     }
 
     override fun <T : Any> readAll(type: KClass<T>, filterSet: Set<Filter>): Set<T> {
         af.log.trace { "readAll(${type.simpleName}, $filterSet)" }
         val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val cypherStatements = this.createCypherMatchStatements(dt, filterSet, "item")
+        val cypherStatements = this.createCypherMatchRootObject(dt, filterSet)
         val records = this.executeReadCypher(cypherStatements)
-        val itemSet = this.convertObjects(dt, records, "item")
+        val rootNodeName = records[0].keys().first() //FIXME
+        val itemSet = this.convertObjects(dt, records, rootNodeName)
         return itemSet as Set<T>
     }
 
