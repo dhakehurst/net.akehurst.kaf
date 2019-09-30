@@ -470,6 +470,22 @@ class PersistentStoreNeo4j(
         return listOf(cypherStatement)
     }
 
+    private fun createMatchSet(path:String) : List<CypherStatement>{
+        val set = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
+        val elements = CypherMatchLink(set.label, set.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
+        return listOf(set) + elements
+    }
+    private fun createMatchList(path:String) : List<CypherStatement>{
+        val list = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
+        val elements = CypherMatchLink(list.label, list.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
+        return listOf(list) + elements
+    }
+    private fun createMatchMap(path:String) : List<CypherStatement>{
+        val map = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
+        val entries = CypherMatchNode(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/entry")
+        return listOf(map) + entries
+    }
+
     private fun createCypherMatchRootObject(datatype: Datatype, filterSet: Set<Filter>): List<CypherStatement> {
         val rootLabel = datatype.qualifiedName(".")
         val rootNodeName = "/" + (filterSet.first() as FilterProperty).value as String
@@ -486,25 +502,27 @@ class PersistentStoreNeo4j(
 
         val composite = datatype.property.values.filter {
             it.propertyType.isPrimitive.not()
-        }.map {
+        }.flatMap {
+            val ppath = rootNodeName + "/${it.name}"
             val pt =  it.propertyType
-            val childLabel = when {
+            when {
                 pt.isCollection -> {
                     val pct = pt as CollectionType
                     when {
-                        pct.isSet-> CypherStatement.SET_TYPE_LABEL
-                        pct.isList-> CypherStatement.LIST_TYPE_LABEL
-                        pct.isMap -> CypherStatement.MAP_TYPE_LABEL
+                        pct.isSet-> createMatchSet(ppath)
+                        pct.isList-> createMatchList(ppath)
+                        pct.isMap -> createMatchMap(ppath)
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
                 }
-                else -> pt.qualifiedName(".")
+                else -> {
+                    val childLabel = pt.qualifiedName(".")
+                    // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
+                    val match = CypherMatchNode(childLabel, ppath)
+                    match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
+                    listOf(match)
+                }
             }
-            val childNodeName = rootNodeName + "/${it.name}"
-           // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
-            val match = CypherMatchNode(childLabel, childNodeName)
-            match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(childNodeName)))
-            match
         }
         return listOf(cypherStatement) + composite
     }

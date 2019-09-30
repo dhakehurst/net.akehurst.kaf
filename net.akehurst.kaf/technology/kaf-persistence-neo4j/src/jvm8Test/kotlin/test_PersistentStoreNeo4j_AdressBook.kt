@@ -187,4 +187,27 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         assertEquals(expected.title, actual.title)
         assertEquals(expected.contacts, actual.contacts)
     }
+
+    @Test
+    fun read_containing_2() {
+        // given
+        this.configure()
+        val abk = AddressBook("friends")
+        val c1 = Contact("adam")
+        abk.contacts.put(c1.alias, c1)
+        val c2 = Contact("brian")
+        abk.contacts.put(c2.alias, c2)
+        sut.create(AddressBook::class, abk)
+
+        // when
+        val filter = FilterProperty("title", "friends")
+        val actual = sut.read(AddressBook::class, setOf(filter))
+
+        // then
+        val expected = abk
+        assertNotNull(actual)
+        assertEquals(expected, actual)
+        assertEquals(expected.title, actual.title)
+        assertEquals(expected.contacts, actual.contacts)
+    }
 }
