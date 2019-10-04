@@ -28,7 +28,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
                   val  alias : String
                   var  name : String
                   var  email : String
-                  var  phone : Set<PhoneNumber>
+                  car  phone : Set<PhoneNumber>
                   var  dateOfBirth : DateTime
                   dis  age : TimeSpan
                   var  friendsWith : Set<Contact>
@@ -120,7 +120,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val c = Contact("adam")
         c.name = "Adam Ant"
         c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
-        c.emails = listOf("adam@pop.com", "adam.ant@pop.com")
+        c.emails = mutableListOf("adam@pop.com", "adam.ant@pop.com")
 
         //when
         sut.create(Contact::class, c)
@@ -173,6 +173,12 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         this.configure()
         val abk = AddressBook("friends")
         val c1 = Contact("adam")
+        c1.emails.add("adam@pop.com")
+        c1.emails.add("adam.ant@pop.com")
+        c1.dateOfBirth = DateTime(year = 1972, month=Month.November, day = 21)
+        c1.name = "Adam Ant"
+        c1.phone.add(PhoneNumber("home", "12432523523"))
+        c1.phone.add(PhoneNumber("work", "09876543123"))
         abk.contacts.put(c1.alias, c1)
         sut.create(AddressBook::class, abk)
 
@@ -194,6 +200,12 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         this.configure()
         val abk = AddressBook("friends")
         val c1 = Contact("adam")
+        c1.emails.add("adam@pop.com")
+        c1.emails.add("adam.ant@pop.com")
+        c1.dateOfBirth = DateTime(year = 1972, month=Month.November, day = 21)
+        c1.name = "Adam Ant"
+        c1.phone.add(PhoneNumber("home", "12432523523"))
+        c1.phone.add(PhoneNumber("work", "09876543123"))
         abk.contacts.put(c1.alias, c1)
         val c2 = Contact("brian")
         abk.contacts.put(c2.alias, c2)

@@ -15,13 +15,13 @@ data class Contact(
         val alias: String
 ) {
     var name: String? = null
-    var emails: List<String> = mutableListOf()
-    var phone: Set<PhoneNumber> = mutableSetOf()
+    var emails: MutableList<String> = mutableListOf()
+    var phone:  MutableSet<PhoneNumber> = mutableSetOf()
     var dateOfBirth: DateTime = DateTime.EPOCH
 
     val age : TimeSpan get() = DateTime.now() - this.dateOfBirth
 
-    var friendsWith = mutableSetOf<Contact>()
+    var friendsWith:MutableSet<Contact> = mutableSetOf<Contact>()
 }
 
 data class PhoneNumber(

@@ -11,9 +11,12 @@ import net.akehurst.kaf.technology.persistence.api.FilterProperty
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kotlin.komposite.api.CollectionType
 import net.akehurst.kotlin.komposite.api.Datatype
+import net.akehurst.kotlin.komposite.api.TypeDeclaration
+import net.akehurst.kotlin.komposite.api.TypeInstance
 import net.akehurst.kotlin.komposite.common.*
 import net.akehurst.kotlinx.collections.Stack
 import org.neo4j.driver.v1.*
+import org.neo4j.driver.v1.types.Node
 import org.neo4j.driver.v1.types.TypeSystem
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
@@ -24,6 +27,7 @@ interface CypherStatement {
     companion object {
         val PATH_PROPERTY = "#path"
         val COMPOSITE_PROPERTY = "#isComposite"
+        val SIZE_PROPERTY = "#size"
         val ELEMENTS_PROPERTY = "#elements"
         val ELEMENT_RELATION = "#element"
         val SET_TYPE_LABEL = "#SET"
@@ -33,8 +37,11 @@ interface CypherStatement {
         val ENTRY_RELATION = "#entry"
         val MAPENTRY_TYPE_LABEL = "#MAPENTRY"
         val KEY_PROPERTY = "#key"
+        val VALUE_PROPERTY = "#value"
         val KEY_RELATION = "#key"
         val VALUE_RELATION = "#value"
+
+        val ENTRY_PATH_SEGMENT = "#entry"
     }
 
     fun toCypherStatement(): String
@@ -123,9 +130,10 @@ data class CypherMap(
 ) : CypherElement {
 
     override val label = CypherStatement.MAP_TYPE_LABEL
+    var size = 0
 
     override fun toCypherStatement(): String {
-        return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+        return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size})"
     }
 }
 
@@ -227,12 +235,25 @@ data class CypherMatchNode(
     }
 }
 
+data class CypherMatchMap(
+        val path: String
+): CypherStatement {
+    override fun toCypherStatement(): String {
+        return """
+            MATCH (`$path`:`${CypherStatement.MAP_TYPE_LABEL}`)
+            UNWIND(range(0,`$path`.`${CypherStatement.SIZE_PROPERTY}`-1)) AS entryIndex
+            MATCH (`$path/${CypherStatement.ENTRY_PATH_SEGMENT}`:`${CypherStatement.MAPENTRY_TYPE_LABEL}`) WHERE `$path/${CypherStatement.ENTRY_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/'+entryIndex
+            RETURN `$path`, `$path/${CypherStatement.ENTRY_PATH_SEGMENT}`, '$path/'+entryIndex AS entryPath
+        """.trimIndent()
+    }
+}
+
 data class CypherMatchLink(
-        val srcLabel:String,
-        val srcNodeName:String,
-        val lnkLabel:String,
-        val tgtLabel:String,
-        val tgtNodeName:String
+        val srcLabel: String,
+        val srcNodeName: String,
+        val lnkLabel: String,
+        val tgtLabel: String,
+        val tgtNodeName: String
 ) : CypherStatement {
     override fun toCypherStatement(): String {
         return "MATCH (`$srcNodeName`:`$srcLabel`)-[:`$lnkLabel`]-(`$tgtNodeName`:`$tgtLabel`) RETURN `$srcNodeName`, `$tgtNodeName`"
@@ -342,6 +363,7 @@ class PersistentStoreNeo4j(
                 af.log.debug { "walk: mapBegin: $path, $info" }
                 val objId = path.joinToString("/", "/$rootIdentity/")
                 val stm = CypherMap(objId)
+                stm.size = map.size
                 currentObjStack.push(stm)
                 WalkInfo(info.up, info.acc + stm)
             }
@@ -354,8 +376,9 @@ class PersistentStoreNeo4j(
                 val cyValue = currentObjStack.pop()
                 val cyKey = currentObjStack.pop()
                 val cyMap = currentObjStack.peek() as CypherMap
-                val entryId = path.joinToString("/", "/$rootIdentity/")
-                val cyEntry = CypherMapEntry(entryId)
+                val entryPath = path.dropLast(1).joinToString("/", "/$rootIdentity/")
+                val valuePath = path.joinToString("/", "/$rootIdentity/")
+                val cyEntry = CypherMapEntry(entryPath)
                 acc += cyEntry
                 val cyEntryRel = CypherReference(cyMap.label, cyMap.path, CypherStatement.ENTRY_RELATION, cyEntry.label, cyEntry.path)
                 acc += cyEntryRel
@@ -456,34 +479,36 @@ class PersistentStoreNeo4j(
         return cypher
     }
 
-    private fun createCypherMatchObject(objPathName:String, objDatatype: Datatype): List<CypherStatement> {
-        val objLabel = objDatatype.qualifiedName(".")
+    private fun createCypherMatchObject(typeDeclaration: TypeDeclaration, objPathName: String): List<CypherStatement> {
+        val objLabel = typeDeclaration.qualifiedName(".")
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNode(objLabel, objPathName)
-        val composite = objDatatype.property.values.filter {
-            it.propertyType.isPrimitive.not()
+        val composite = (typeDeclaration as Datatype).property.values.filter {
+            it.propertyType.declaration.isPrimitive.not()
         }.map {
-            val childLabel = it.propertyType.qualifiedName(".")
+            val childLabel = it.propertyType.declaration.qualifiedName(".")
             val childNodeName = objPathName + "/${it.name}"
             CypherMatchLink(objLabel, objPathName, it.name, childLabel, childNodeName)
         }
         return listOf(cypherStatement)
     }
 
-    private fun createMatchSet(path:String) : List<CypherStatement>{
+    private fun createMatchSet(path: String): List<CypherStatement> {
         val set = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
         val elements = CypherMatchLink(set.label, set.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
         return listOf(set) + elements
     }
-    private fun createMatchList(path:String) : List<CypherStatement>{
+
+    private fun createMatchList(path: String): List<CypherStatement> {
         val list = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
         val elements = CypherMatchLink(list.label, list.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
         return listOf(list) + elements
     }
-    private fun createMatchMap(path:String) : List<CypherStatement>{
-        val map = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
-        val entries = CypherMatchNode(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/entry")
-        return listOf(map) + entries
+
+    private fun createMatchMap(path: String): List<CypherStatement> {
+        val map = CypherMatchMap(path)
+        //val entries = CypherMatchNode(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/${CypherStatement.ENTRY_PATH_SEGMENT}")
+        return listOf(map)// + entries
     }
 
     private fun createCypherMatchRootObject(datatype: Datatype, filterSet: Set<Filter>): List<CypherStatement> {
@@ -501,22 +526,22 @@ class PersistentStoreNeo4j(
         }
 
         val composite = datatype.property.values.filter {
-            it.propertyType.isPrimitive.not()
+            it.propertyType.declaration.isPrimitive.not()
         }.flatMap {
             val ppath = rootNodeName + "/${it.name}"
-            val pt =  it.propertyType
+            val pt = it.propertyType
             when {
-                pt.isCollection -> {
-                    val pct = pt as CollectionType
+                pt.declaration.isCollection -> {
+                    val pct = pt.declaration as CollectionType
                     when {
-                        pct.isSet-> createMatchSet(ppath)
-                        pct.isList-> createMatchList(ppath)
+                        pct.isSet -> createMatchSet(ppath)
+                        pct.isList -> createMatchList(ppath)
                         pct.isMap -> createMatchMap(ppath)
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
                 }
                 else -> {
-                    val childLabel = pt.qualifiedName(".")
+                    val childLabel = pt.declaration.qualifiedName(".")
                     // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
                     val match = CypherMatchNode(childLabel, ppath)
                     match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
@@ -556,11 +581,25 @@ class PersistentStoreNeo4j(
         return records
     }
 
-    private fun recordsToPathMap(records:List<Record>) : Map<String,Value> {
-        return records.associate{ val key = it.keys().first(); Pair(key, it[key]) }
+    private fun recordsToPathMap(records: List<Record>): Map<String, List<Value>> {
+        val map = mutableMapOf<String, List<Value>>()
+        records.forEach { rec ->
+            val path = rec.keys().first()
+            map[path] = listOf(rec[path])
+            rec.keys().forEach { key ->
+                when {
+                    key.endsWith(CypherStatement.ENTRY_PATH_SEGMENT) -> {
+                        val valueNode = rec[key].asNode()
+                        val entryPath = valueNode[CypherStatement.PATH_PROPERTY].asString()
+                        map[entryPath] = listOf(rec[key])
+                    }
+                }
+            }
+        }
+        return map //records.groupBy({ it.keys().first() }, { val key = it.keys().first(); it[key] })
     }
 
-    fun convertValue(ts: TypeSystem, neo4jValue: Value): Any? {
+    fun convertValue(pathMap: Map<String, List<Value>>, ts: TypeSystem, type: TypeInstance, neo4jValue: Value): Any? {
         return when (neo4jValue.type()) {
             ts.NULL() -> null
             ts.STRING() -> neo4jValue.asString()
@@ -577,9 +616,9 @@ class PersistentStoreNeo4j(
             ts.NODE() -> {
                 val node = neo4jValue.asNode()
                 when {
-                    node.hasLabel(CypherStatement.SET_TYPE_LABEL) -> convertSetNode()
-                    node.hasLabel(CypherStatement.LIST_TYPE_LABEL) -> convertListNode()
-                    node.hasLabel(CypherStatement.MAP_TYPE_LABEL) -> convertMapNode()
+                    node.hasLabel(CypherStatement.SET_TYPE_LABEL) -> convertSetNode(pathMap, node)
+                    node.hasLabel(CypherStatement.LIST_TYPE_LABEL) -> convertListNode(pathMap, node)
+                    node.hasLabel(CypherStatement.MAP_TYPE_LABEL) -> convertMapNode(pathMap, ts, type, node)
                     else -> TODO()
                 }
             }
@@ -587,34 +626,70 @@ class PersistentStoreNeo4j(
         }
     }
 
-    fun convertSetNode() : Set<Any> {
+    fun convertSetNode(pathMap: Map<String, List<Value>>, node: Node): Set<Any> {
         return emptySet()
     }
 
-    fun convertListNode() : List<Any> {
+    fun convertListNode(pathMap: Map<String, List<Value>>, node: Node): List<Any> {
         return emptyList()
     }
 
-    fun convertMapNode() : Map<Any,Any> {
+    fun convertMapNode(pathMap: Map<String, List<Value>>, ts: TypeSystem, type: TypeInstance, node: Node): Map<Any, Any> {
+        val path = node[CypherStatement.PATH_PROPERTY].asString()!!
+        val size = node[CypherStatement.SIZE_PROPERTY].asInt()
+
+        for(entry in 0 until size-1) {
+            val entryPath = "$path/$entry"
+            val entryNode = pathMap[entryPath]!![0].asNode()
+            val key = convertValue(pathMap, ts, type, entryNode[CypherStatement.KEY_PROPERTY])
+            val valueType = type.arguments[1]
+            val cypherValueStatements = this.createCypherMatchObject(valueType.declaration, "$entryPath/value")
+            val res = this.executeReadCypher(cypherValueStatements)
+            val pm = this.recordsToPathMap(res.toList())
+        }
+
+        val entries = pathMap[path + "/${CypherStatement.ENTRY_PATH_SEGMENT}"] ?: emptyList()
+        /*
+        entries.associate {
+            val entry = it.asNode()
+            val key = if (entry.containsKey(CypherStatement.KEY_PROPERTY)) {
+                this.convertValue(pathMap, ts, entry[CypherStatement.KEY_PROPERTY])
+            } else {
+                TODO()
+            }
+            val value = if (entry.containsKey(CypherStatement.VALUE_PROPERTY)) {
+                this.convertValue(pathMap, ts, entry[CypherStatement.VALUE_PROPERTY])
+            } else {
+                val valuePath = ""
+                val neo4jValue = pathMap[valuePath]
+                if (null != neo4jValue) {
+                    this.convertValue(pathMap, ts, neo4jValue[0])
+                } else {
+                    null
+                }
+            }
+            Pair(key, value)
+        }
+         */
         return emptyMap()
     }
 
     private fun convertObjects(datatype: Datatype, records: List<Record>, nodeName: String): Set<Any> {
         return records.map {
-       //     this.convertObject(datatype, it, nodeName)
+            //     this.convertObject(datatype, it, nodeName)
         }.toSet()
     }
 
-    private fun convertObject(datatype: Datatype, pathMap: Map<String,Value>, path: String): Any {
+    private fun convertObject(datatype: Datatype, pathMap: Map<String, List<Value>>, path: String): Any {
         val ts = this._neo4j.session().typeSystem()
-        val node = pathMap[path]?.asNode() ?: throw PersistenceException("node $path not found")
+        val node = pathMap[path]?.get(0)?.asNode() ?: throw PersistenceException("node $path not found")
         val idProps = datatype.identityProperties.map {
             val neo4jValue = node[it.name]
             //TODO: handel non primitive properties
             if (null == neo4jValue) {
                 null
             } else {
-                val v = this.convertValue(ts, neo4jValue)
+                val v = this.convertValue(pathMap, ts, it.propertyType, neo4jValue)
                 v
             }
         }
@@ -624,9 +699,9 @@ class PersistentStoreNeo4j(
         // TODO: change this to enable nonExplicit properties, once JS reflection works
         datatype.explicitNonIdentityProperties.forEach {
             val ppath = "$path/${it.name}"
-            val neo4jValue = pathMap[ppath]
-            if (null != neo4jValue) {
-                val value = this.convertValue(ts, neo4jValue)
+            val neo4jValueList = pathMap[ppath]
+            if (null != neo4jValueList) {
+                val value = this.convertValue(pathMap, ts, it.propertyType, neo4jValueList[0])
                 it.set(obj, value)
             }
         }
