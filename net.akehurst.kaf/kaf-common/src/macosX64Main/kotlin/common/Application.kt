@@ -8,6 +8,11 @@ import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.Logger
 import kotlin.reflect.KProperty1
 
+actual class ApplicationFrameworkService(){
+    actual fun doInjections(commandLineArgs: List<String>, root: Identifiable) {
+    }
+}
+
 actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
     val builder = AFApplicationDefault.Builder(self, id)
     builder.init()

@@ -5,6 +5,7 @@ import net.akehurst.kaf.service.logging.api.Logger
 interface AFIdentifiable {
     val identity: String
     val log: Logger
+    fun doInjections(root:Identifiable)
 }
 interface Identifiable {
     val af:AFIdentifiable

@@ -22,34 +22,35 @@ class ApplicationCompositionWalker {
         val COMPOSITE_PARTS_AF = listOf(Service::class.starProjectedType)
     }
 
-     fun walkDepthFirst(self: Identifiable, func:(obj:Identifiable, property:KProperty<*>)->Unit) {
+    fun walkDepthFirst(self: Identifiable, selfFunc: (obj: Identifiable) -> Unit, propFunc: (obj: Identifiable, property: KProperty<*>) -> Unit) {
         when (self) {
-            is Application -> this._walkDepthFirst(self, func, COMPOSITE_PARTS_APPLICATION)
-            is Service -> this._walkDepthFirst(self, func, COMPOSITE_PARTS_SERVICE)
-            is Component -> this._walkDepthFirst(self, func, COMPOSITE_PARTS_COMPONENT)
-            is Active -> this._walkDepthFirst(self, func, COMPOSITE_PARTS_ACTIVE)
-            is Identifiable -> this._walkDepthFirst(self, func, COMPOSITE_PARTS_IDENTIFIABLE)
+            is Application -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_APPLICATION)
+            is Service -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_SERVICE)
+            is Component -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_COMPONENT)
+            is Active -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_ACTIVE)
+            is Identifiable -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_IDENTIFIABLE)
         }
+        selfFunc(self)
     }
 
-    private fun _walkDepthFirst(self:Identifiable, func:(obj:Identifiable, property:KProperty<*>)->Unit, compositeTypes:List<KType>) {
+    private fun _walkDepthFirst(self: Identifiable, selfFunc: (obj: Identifiable) -> Unit, propFunc: (obj: Identifiable, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
         self::class.members.filter { it is KProperty<*> }.forEach { property ->
             if (property is KProperty<*>) {
-                func(self, property)
+                propFunc(self, property)
 
-                if(compositeTypes.any { property.returnType.isSubtypeOf(it) }) {
+                if (compositeTypes.any { property.returnType.isSubtypeOf(it) }) {
                     val composite = property.getter.call(self)
-                    if (null!=composite && composite is Identifiable) {
-                        this.walkDepthFirst(composite, func)
+                    if (null != composite && composite is Identifiable) {
+                        this.walkDepthFirst(composite, selfFunc, propFunc)
                     }
                 }
 
                 // walk things marked as 'CompositePart'
                 val annotation = property.findAnnotation<CompositePart>()
-                if (null!=annotation) {
+                if (null != annotation) {
                     val composite = property.getter.call(self)
-                    if (null!=composite && composite is Identifiable) {
-                        this.walkDepthFirst(composite, func)
+                    if (null != composite && composite is Identifiable) {
+                        this.walkDepthFirst(composite, selfFunc, propFunc)
                     }
                 }
 

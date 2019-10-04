@@ -2,8 +2,6 @@ package net.akehurst.kaf.service.logging.api
 
 import net.akehurst.kaf.service.api.Service
 import net.akehurst.kaf.service.api.ServiceReference
-import net.akehurst.kaf.service.api.serviceReference
-import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 class LoggingServiceException : RuntimeException {

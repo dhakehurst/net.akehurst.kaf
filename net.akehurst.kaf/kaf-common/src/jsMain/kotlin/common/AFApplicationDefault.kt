@@ -2,16 +2,20 @@ package net.akehurst.kaf.common
 
 import net.akehurst.kaf.api.AFApplication
 import net.akehurst.kaf.api.Application
+import net.akehurst.kaf.api.Identifiable
 import net.akehurst.kaf.service.api.Service
 
+actual class ApplicationFrameworkService(){
+    actual fun doInjections(commandLineArgs: List<String>, root: Identifiable) {
+    }
+
+}
 
 actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
     val builder = AFApplicationDefault.Builder(self, id)
     builder.init()
     return builder.build()
 }
-
-
 
 actual class AFApplicationDefault(
         val self: Application,

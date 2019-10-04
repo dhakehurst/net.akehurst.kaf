@@ -18,6 +18,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val KOMPOSITE = """
             namespace com.soywiz.klock {
                 primitive DateTime
+                primitive TimeSpan
             }
             namespace net.akehurst.kaf.technology.persistence.neo4j {
                 datatype AddressBook {
@@ -221,5 +222,17 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         assertEquals(expected, actual)
         assertEquals(expected.title, actual.title)
         assertEquals(expected.contacts, actual.contacts)
+        expected.contacts.forEach { me ->
+            val exp = me.value
+            val act = actual.contacts[me.key]!!
+            assertEquals(exp, act)
+            assertEquals(exp.age, act.age)
+            assertEquals(exp.alias, act.alias)
+            assertEquals(exp.dateOfBirth, act.dateOfBirth)
+            assertEquals(exp.emails, act.emails)
+            assertEquals(exp.friendsWith, act.friendsWith)
+            assertEquals(exp.name, act.name)
+            assertEquals(exp.phone, act.phone)
+        }
     }
 }

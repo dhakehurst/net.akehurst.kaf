@@ -15,7 +15,7 @@ open class AFActiveDefault(
         val initialise: () -> Unit,
         val execute: () -> Unit,
         val terminate: () -> Unit
-) : AFBase(afIdentity), AFActive {
+) : AFIdentifiableDefault(afIdentity), AFActive {
 
     class Builder(val self: Active, val id: String) {
         var initialise: () -> Unit = {}
