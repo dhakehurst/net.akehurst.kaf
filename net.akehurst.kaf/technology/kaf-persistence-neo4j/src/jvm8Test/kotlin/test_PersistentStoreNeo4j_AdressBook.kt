@@ -1,5 +1,6 @@
 package net.akehurst.kaf.technology.persistence.neo4j
 
+import com.soywiz.klock.Date
 import com.soywiz.klock.DateTime
 import com.soywiz.klock.Month
 import com.soywiz.klock.Year
@@ -10,6 +11,11 @@ import net.akehurst.kaf.service.configuration.map.ConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import net.akehurst.kaf.technology.persistence.api.FilterProperty
+import net.akehurst.kotlin.komposite.api.PrimitiveMapper
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import kotlin.reflect.KClass
 import kotlin.test.*
 
 class test_PersystentStoreNeo4j_AddressBook : Application {
@@ -28,7 +34,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
                 datatype Contact {
                   val  alias : String
                   var  name : String
-                  var  email : String
+                  var  emails : List<String>
                   car  phone : Set<PhoneNumber>
                   var  dateOfBirth : DateTime
                   dis  age : TimeSpan
@@ -49,7 +55,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
             mapOf(
                     "logging" to LoggingServiceConsole(LogLevel.ALL),
                     "configuration" to ConfigurationMap(mutableMapOf(
-//                            "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
+                            "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
                     )),
                     "cmdLineHandler" to CommandLineHandlerSimple(commandLineArgs)
             )
@@ -75,14 +81,16 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 
     @Test
     fun configure() {
+        val primitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper>()
         this.sut.configure(mapOf(
-//                "embedded" to true,
-//                "uri" to "bolt://localhost:7777",
-                "embedded" to false,
-                "uri" to "bolt://localhost:7687",
+                "embedded" to true,
+                "uri" to "bolt://localhost:7777",
+//                "embedded" to false,
+//                "uri" to "bolt://localhost:7687",
                 "user" to "neo4j",
                 "password" to "admin",
-                "komposite" to KOMPOSITE
+                "komposite" to KOMPOSITE,
+                "primitiveMappers" to primitiveMappers
         ))
     }
 
@@ -165,6 +173,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         assertNotNull(actual)
         assertEquals(expected, actual)
         assertEquals(expected.title, actual.title)
+        assertEquals(expected.contacts.size, actual.contacts.size)
         assertEquals(expected.contacts, actual.contacts)
     }
 

@@ -9,10 +9,7 @@ import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.Filter
 import net.akehurst.kaf.technology.persistence.api.FilterProperty
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
-import net.akehurst.kotlin.komposite.api.CollectionType
-import net.akehurst.kotlin.komposite.api.Datatype
-import net.akehurst.kotlin.komposite.api.TypeDeclaration
-import net.akehurst.kotlin.komposite.api.TypeInstance
+import net.akehurst.kotlin.komposite.api.*
 import net.akehurst.kotlin.komposite.common.*
 import net.akehurst.kotlin.komposite.processor.TypeInstanceSimple
 import net.akehurst.kotlinx.collections.Stack
@@ -23,6 +20,9 @@ import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
 import org.neo4j.kernel.configuration.BoltConnector
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 // TODO: improve performance
 // [https://medium.com/neo4j/5-tips-tricks-for-fast-batched-updates-of-graph-structures-with-neo4j-and-cypher-73c7f693c8cc]
@@ -56,9 +56,14 @@ class PersistentStoreNeo4j(
                 currentObjStack.push(CypherValue(null))
                 WalkInfo(path, info.acc)
             }
-            primitive { path, info, value ->
+            primitive { path, info, primitive, mapper ->
                 af.log.debug { "walk: primitive: $path, $info" }
-                val cypherValue = CypherValue(value)
+                val cypherValue = if (null == mapper) {
+                    CypherValue(primitive)
+                } else {
+                    val raw = mapper.toRaw(primitive)
+                    CypherValue(raw)
+                }
                 currentObjStack.push(cypherValue)
                 WalkInfo(info.up, info.acc)
             }
@@ -75,10 +80,10 @@ class PersistentStoreNeo4j(
             }
             collBegin { path, info, type, coll ->
                 af.log.debug { "walk: collBegin: $path, $info" }
-                val objId = (rootPath+path).joinToString("/", "/")
+                val objId = (rootPath + path).joinToString("/", "/")
                 val stm = when {
-                    type.isList -> CypherList(objId)
-                    type.isSet -> CypherSet(objId)
+                    type.isList -> CypherList(objId, coll.size)
+                    type.isSet -> CypherSet(objId, coll.size)
                     else -> throw PersistenceException("Collection type ${type.name} is not supported")
                 }
                 currentObjStack.push(stm)
@@ -121,9 +126,8 @@ class PersistentStoreNeo4j(
             }
             mapBegin { path, info, map ->
                 af.log.debug { "walk: mapBegin: $path, $info" }
-                val objId = (rootPath+path).joinToString("/", "/")
-                val stm = CypherMap(objId)
-                stm.size = map.size
+                val objId = (rootPath + path).joinToString("/", "/")
+                val stm = CypherMap(objId, map.size)
                 currentObjStack.push(stm)
                 WalkInfo(info.up, info.acc + stm)
             }
@@ -136,8 +140,8 @@ class PersistentStoreNeo4j(
                 val cyValue = currentObjStack.pop()
                 val cyKey = currentObjStack.pop()
                 val cyMap = currentObjStack.peek() as CypherMap
-                val entryPath = (rootPath+path).dropLast(1).joinToString("/", "/")
-                val valuePath = (rootPath+path).joinToString("/", "/")
+                val entryPath = (rootPath + path).dropLast(1).joinToString("/", "/")
+                val valuePath = (rootPath + path).joinToString("/", "/")
                 val cyEntry = CypherMapEntry(entryPath)
                 acc += cyEntry
                 val cyEntryRel = CypherReference(cyMap.label, cyMap.path, CypherStatement.ENTRY_RELATION, cyEntry.label, cyEntry.path)
@@ -167,7 +171,7 @@ class PersistentStoreNeo4j(
             }
             objectBegin { path, info, obj, datatype ->
                 af.log.debug { "walk: objectBegin: $path, $info" }
-                val objId = (rootPath+path).joinToString("/", "/")
+                val objId = (rootPath + path).joinToString("/", "/")
                 val objLabel = datatype.qualifiedName(".")
                 val obj = CypherObject(objLabel, objId)
                 currentObjStack.push(obj)
@@ -296,12 +300,29 @@ class PersistentStoreNeo4j(
             }
         }
         af.log.debug { "success: connected to Neo4j: ${uri} as user ${user}" }
-        this.neo4JReader = Neo4JReader(this.af.identity+".neo4JReader", this._neo4j)
+        this.neo4JReader = Neo4JReader(this.af.identity + ".neo4JReader", this._neo4j)
         af.doInjections(this.neo4JReader)
+
+        //default DateTime mapping
+        val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper>()
+        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, ZonedDateTime::class,
+                { primitive ->
+                    //primitive.toString("yyyy-MM-dd'T'HH:mm:ss")
+                    val instant = Instant.ofEpochMilli(primitive.unixMillisLong)
+                    ZonedDateTime.ofInstant(instant, ZoneId.systemDefault())
+                },
+                { raw ->
+                    val unixMillis = raw.toInstant().toEpochMilli()
+                    DateTime.fromUnix(unixMillis)
+                })
+
         val komposite = settings["komposite"] as String
+        if (settings.containsKey("primitiveMappers")) {
+            defaultPrimitiveMappers.putAll( settings["primitiveMappers"] as Map<KClass<*>, PrimitiveMapper> )
+        }
         af.log.debug { "trying: to register komposite information: $komposite" }
-        this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD)
-        this._registry.registerFromConfigString(komposite)
+        this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, emptyMap())
+        this._registry.registerFromConfigString(komposite, defaultPrimitiveMappers)
     }
 
     override fun <T : Any> create(type: KClass<T>, item: T) {
@@ -324,7 +345,7 @@ class PersistentStoreNeo4j(
         af.log.trace { "read(${type.simpleName}, $filterSet)" }
         val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.session().typeSystem())
         val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val item = fromNeo4JConverter.convertRootObject(dt,filterSet)
+        val item = fromNeo4JConverter.convertRootObject(dt, filterSet)
         return item as T
     }
 

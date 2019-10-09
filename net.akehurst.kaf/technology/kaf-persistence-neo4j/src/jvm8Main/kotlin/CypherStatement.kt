@@ -2,6 +2,7 @@ package net.akehurst.kaf.technology.persistence.neo4j
 
 import com.soywiz.klock.DateTime
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
+import java.time.ZonedDateTime
 
 interface CypherStatement {
     companion object {
@@ -22,6 +23,7 @@ interface CypherStatement {
         val VALUE_RELATION = "#value"
 
         val ENTRY_PATH_SEGMENT = "#entry"
+        val ELEMENT_PATH_SEGMENT = "#element"
     }
 
     fun toCypherStatement(): String
@@ -54,15 +56,15 @@ data class CypherValue(
                 }.joinToString(",")
                 "[$elements]"
             }
-            // TODO: support user defined primitive type mappers
-            value is DateTime -> "datetime('${value.toString("yyyy-MM-dd'T'HH:mm:ss")}')" //TODO: timezone and more resolution on seconds
+            value is ZonedDateTime -> "datetime('${value}')"
             else -> throw PersistenceException("CypherValue of type ${value::class.simpleName} is not yet supported")
         }
     }
 }
 
 data class CypherList(
-        override val path: String
+        override val path: String,
+        val size: Int
 ) : CypherElement {
 
     private val _primitiveElements = mutableListOf<CypherValue>()
@@ -76,15 +78,16 @@ data class CypherList(
     override fun toCypherStatement(): String {
         return if (this.isPrimitiveCollection) {
             val elements = this._primitiveElements.map { it.toCypherString() }.joinToString(separator = ",", prefix = "[", postfix = "]")
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size, `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
         } else {
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size})"
         }
     }
 }
 
 data class CypherSet(
-        override val path: String
+        override val path: String,
+        val size: Int
 ) : CypherElement {
 
     private val _primitiveElements = mutableListOf<CypherValue>()
@@ -98,19 +101,19 @@ data class CypherSet(
     override fun toCypherStatement(): String {
         return if (this.isPrimitiveCollection) {
             val elements = this._primitiveElements.map { it.toCypherString() }.joinToString(separator = ",", prefix = "[", postfix = "]")
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size, `${CypherStatement.ELEMENTS_PROPERTY}`:$elements})"
         } else {
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size})"
         }
     }
 }
 
 data class CypherMap(
-        override val path: String
+        override val path: String,
+        val size: Int
 ) : CypherElement {
 
     override val label = CypherStatement.MAP_TYPE_LABEL
-    var size = 0
 
     override fun toCypherStatement(): String {
         return "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', `${CypherStatement.SIZE_PROPERTY}`:$size})"
@@ -198,20 +201,34 @@ data class CypherObject(
 
 data class CypherMatchNode(
         val label: String,
-        val nodeName: String
+        val path: String
 ) : CypherStatement {
     val properties = mutableListOf<CypherProperty>()
     override fun toCypherStatement(): String {
         val propertyStr = this.properties.map { it.toCypherString() }.joinToString(", ")
         return if (propertyStr.isEmpty()) {
-            "MATCH (`$nodeName`:`$label`) RETURN `$nodeName`"
+            "MATCH (`$path`:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'}) RETURN `$path`"
         } else {
-            "MATCH (`$nodeName`:`$label`{$propertyStr}) RETURN `$nodeName`"
+            "MATCH (`$path`:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path',$propertyStr}) RETURN `$path`"
         }
     }
 
     override fun toString(): String {
         return this.toCypherStatement()
+    }
+}
+
+data class CypherMatchList(
+        val path: String,
+        val elementTypeLabel: String
+): CypherStatement {
+    override fun toCypherStatement(): String {
+        return """
+            MATCH (`$path`:`${CypherStatement.LIST_TYPE_LABEL}`{`${CypherStatement.PATH_PROPERTY}`:`$path`})
+            UNWIND(range(0,`$path`.`${CypherStatement.SIZE_PROPERTY}`-1)) AS elementIndex
+            MATCH (`$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`:`${elementTypeLabel}`) WHERE `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/'+elementIndex
+            RETURN `$path`, `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`, '$path/'+elementIndex AS elementPath
+        """.trimIndent()
     }
 }
 

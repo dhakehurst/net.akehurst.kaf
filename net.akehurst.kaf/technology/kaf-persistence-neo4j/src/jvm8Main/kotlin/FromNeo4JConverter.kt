@@ -16,7 +16,7 @@ import org.neo4j.driver.v1.types.Node
 import org.neo4j.driver.v1.types.TypeSystem
 
 class FromNeo4JConverter(
-        val reader:Neo4JReader,
+        val reader: Neo4JReader,
         val ts: TypeSystem
 ) {
     var pathMap = mutableMapOf<String, Value>()
@@ -45,7 +45,7 @@ class FromNeo4JConverter(
                     val pct = pt.declaration as CollectionType
                     when {
                         pct.isSet -> createMatchSet(ppath)
-                        pct.isList -> createMatchList(ppath)
+                        pct.isList -> createMatchList(ppath, pt.arguments[0].declaration)
                         pct.isMap -> createMatchMap(ppath)
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
@@ -63,15 +63,18 @@ class FromNeo4JConverter(
     }
 
     private fun createMatchSet(path: String): List<CypherStatement> {
-        val set = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
-        val elements = CypherMatchLink(set.label, set.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
-        return listOf(set) + elements
+        val set = CypherMatchNode(CypherStatement.SET_TYPE_LABEL, path)
+        return listOf(set)
     }
 
-    private fun createMatchList(path: String): List<CypherStatement> {
-        val list = CypherMatchNode(CypherStatement.MAP_TYPE_LABEL, path)
-        val elements = CypherMatchLink(list.label, list.nodeName, CypherStatement.ELEMENT_RELATION, "?", "element")
-        return listOf(list) + elements
+    private fun createMatchList(path: String, elementType: TypeDeclaration): List<CypherStatement> {
+        return if (elementType.isPrimitive) {
+            val list = CypherMatchNode(CypherStatement.LIST_TYPE_LABEL, path)
+            return listOf(list)
+        } else {
+            val list = CypherMatchList(path, elementType.qualifiedName("."))
+            listOf(list)
+        }
     }
 
     private fun createMatchMap(path: String): List<CypherStatement> {
@@ -84,18 +87,35 @@ class FromNeo4JConverter(
         val objLabel = typeDeclaration.qualifiedName(".")
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNode(objLabel, objPathName)
-        cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY,CypherValue(objPathName)))
+        cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(objPathName)))
         val composite = (typeDeclaration as Datatype).property.values.filter {
             it.propertyType.declaration.isPrimitive.not()
-        }.map {
-            val childLabel = it.propertyType.declaration.qualifiedName(".")
-            val childNodeName = objPathName + "/${it.name}"
-            CypherMatchLink(objLabel, objPathName, it.name, childLabel, childNodeName)
+        }.flatMap {
+            val ppath = objPathName + "/${it.name}"
+            val pt = it.propertyType
+            when {
+                pt.declaration.isCollection -> {
+                    val pct = pt.declaration as CollectionType
+                    when {
+                        pct.isSet -> createMatchSet(ppath)
+                        pct.isList -> createMatchList(ppath, pt.arguments[0].declaration)
+                        pct.isMap -> createMatchMap(ppath)
+                        else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
+                    }
+                }
+                else -> {
+                    val childLabel = pt.declaration.qualifiedName(".")
+                    // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
+                    val match = CypherMatchNode(childLabel, ppath)
+                    match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
+                    listOf(match)
+                }
+            }
         }
         return listOf(cypherStatement) + composite
     }
 
-    fun convertRootObject(datatype: Datatype, filterSet: Set<Filter>) :Any {
+    fun convertRootObject(datatype: Datatype, filterSet: Set<Filter>): Any {
         val cypherStatements = this.createCypherMatchRootObject(datatype, filterSet)
         val records = reader.executeReadCypher(cypherStatements)
         this.pathMap = reader.recordsToPathMap(records)
@@ -132,12 +152,84 @@ class FromNeo4JConverter(
         }
     }
 
-    fun convertSetNode(type: TypeInstance, node: Node): Set<Any> {
-        return emptySet()
+    fun convertSetNode(type: TypeInstance, node: Node): Set<Any?> {
+        val elementTypeInstance = type.arguments[0]
+        val path = node[CypherStatement.PATH_PROPERTY].asString()!!
+        val size = node[CypherStatement.SIZE_PROPERTY].asInt()
+        val set = mutableSetOf<Any?>()
+        when {
+            elementTypeInstance.declaration.isPrimitive -> {
+                val elements = node[CypherStatement.ELEMENTS_PROPERTY].asList()
+                elements.forEach { nEl ->
+                    when (nEl) {
+                        is Value -> {
+                            val el = convertValue(elementTypeInstance, nEl)
+                            set.add(el)
+                        }
+                        else -> {
+                            set.add(nEl)
+                        }
+                    }
+                }
+            }
+            else -> {
+                for (elementIndex in 0 until size) {
+                    val elementPath = "$path/$elementIndex"
+                    val cypherValueStatements = this.createCypherMatchObject(elementTypeInstance.declaration, "$elementPath")
+                    val res = reader.executeReadCypher(cypherValueStatements) //TODO read all elements at once!
+                    val pm = reader.recordsToPathMap(res.toList())
+                    pathMap.putAll(pm)
+                    val elementNeo4J = pm["$elementPath"]!!
+                    val element = convertValue(elementTypeInstance, elementNeo4J)
+                    set.add(element)
+                }
+            }
+        }
+
+
+        return set
     }
 
-    fun convertListNode(type: TypeInstance, node: Node): List<Any> {
-        return emptyList()
+    fun convertListNode(type: TypeInstance, node: Node): List<Any?> {
+        val elementTypeInstance = type.arguments[0]
+        val path = node[CypherStatement.PATH_PROPERTY].asString()!!
+        val size = node[CypherStatement.SIZE_PROPERTY].asInt()
+        val list = mutableListOf<Any?>()
+        when {
+            elementTypeInstance.declaration.isPrimitive -> {
+                if (node.containsKey(CypherStatement.ELEMENTS_PROPERTY)) {
+                    val elements = node[CypherStatement.ELEMENTS_PROPERTY].asList()
+                    elements.forEach { nEl ->
+                        when (nEl) {
+                            is Value -> {
+                                val el = convertValue(elementTypeInstance, nEl)
+                                list.add(el)
+                            }
+                            else -> {
+                                list.add(nEl)
+                            }
+                        }
+                    }
+                } else {
+                    // no elements
+                }
+            }
+            else -> {
+                for (elementIndex in 0 until size) {
+                    val elementPath = "$path/$elementIndex"
+                    val cypherValueStatements = this.createCypherMatchObject(elementTypeInstance.declaration, "$elementPath")
+                    val res = reader.executeReadCypher(cypherValueStatements) //TODO read all elements at once!
+                    val pm = reader.recordsToPathMap(res.toList())
+                    pathMap.putAll(pm)
+                    val elementNeo4J = pm["$elementPath"]!!
+                    val element = convertValue(elementTypeInstance, elementNeo4J)
+                    list.add(element)
+                }
+            }
+        }
+
+
+        return list
     }
 
     fun convertMapNode(type: TypeInstance, node: Node): Map<Any, Any?> {
@@ -151,11 +243,11 @@ class FromNeo4JConverter(
             val key = convertValue(type, entryNode[CypherStatement.KEY_PROPERTY]) ?: throw PersistenceException("Cannot have a null key")
             val valueType = type.arguments[1]
             val cypherValueStatements = this.createCypherMatchObject(valueType.declaration, "$entryPath/value")
-            val res = reader.executeReadCypher(cypherValueStatements)
+            val res = reader.executeReadCypher(cypherValueStatements)  //TODO read all entries at once!
             val pm = reader.recordsToPathMap(res.toList())
+            pathMap.putAll(pm)
             val valueNeo4J = pm["$entryPath/value"]!!
             val value = convertValue(valueType, valueNeo4J)
-            pathMap.putAll(pm)
             map[key] = value
         }
         return map
@@ -180,11 +272,22 @@ class FromNeo4JConverter(
 
             // TODO: change this to enable nonExplicit properties, once JS reflection works
             dt.explicitNonIdentityProperties.forEach {
-                val ppath = "$path/${it.name}"
-                val neo4jValueList = pathMap[ppath]
-                if (null != neo4jValueList) {
-                    val value = this.convertValue(it.propertyType, neo4jValueList)
-                    it.set(obj, value)
+                if (it.ignore.not()) {
+                    when {
+                        (it.propertyType.declaration.isPrimitive) -> {
+                            val neo4JValue = node[it.name]
+                            val value = this.convertValue(it.propertyType, neo4JValue)
+                            it.set(obj, value)
+                        }
+                        else -> {
+                            val ppath = "$path/${it.name}"
+                            val neo4jValueList = pathMap[ppath]
+                            if (null != neo4jValueList) {
+                                val value = this.convertValue(it.propertyType, neo4jValueList)
+                                it.set(obj, value)
+                            }
+                        }
+                    }
                 }
             }
             return obj
