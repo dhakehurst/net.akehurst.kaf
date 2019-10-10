@@ -1,5 +1,0 @@
-dependencies {
-
-    commonMainImplementation project(":kaf-service-logging-api")
-
-}
