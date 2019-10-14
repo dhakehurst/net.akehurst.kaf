@@ -61,11 +61,6 @@ class test_Application2 {
             initialise = {
                 greeter.output = console.af.receiver(Output::class)
             }
-
-            execute = {
-                console.af.start()
-                greeter.af.start()
-            }
         }
     }
 
