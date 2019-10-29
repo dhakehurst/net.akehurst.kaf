@@ -69,7 +69,7 @@ open class AFActorDefault(
         val initialise: suspend () -> Unit,
         val preExecute: suspend () -> Unit,
         val terminateFunc: suspend () -> Unit
-) : AFIdentifiableDefault(self, afIdentity), AFActor {
+) : AFPassiveDefault(self, afIdentity), AFActor {
 
     class Builder(val self: Actor, val id: String) {
         var initialise: suspend () -> Unit = {}

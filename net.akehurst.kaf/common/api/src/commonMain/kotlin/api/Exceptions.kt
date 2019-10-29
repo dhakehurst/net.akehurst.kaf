@@ -22,6 +22,6 @@ class ApplicationInstantiationException(message: String) : RuntimeException(mess
 class ActiveException(message: String) : RuntimeException(message)
 class ActorException(message: String) : RuntimeException(message)
 
-class ServiceNotFoundException(serviceClass: KClass<*>) : RuntimeException("Service with identity ${serviceClass.simpleName} is not found")
+class ServiceNotFoundException(serviceClass: KClass<*>) : RuntimeException("Service with identity ${serviceClass} is not found")
 
 
