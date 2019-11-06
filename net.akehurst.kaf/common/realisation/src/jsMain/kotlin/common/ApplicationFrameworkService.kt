@@ -1,9 +1,11 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.ApplicationFrameworkService
+import net.akehurst.kaf.common.api.ExternalConnection
 import net.akehurst.kaf.common.api.Passive
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 
 
 actual fun <T> runBlocking(block:suspend () -> T): T {
@@ -22,6 +24,9 @@ actual class ApplicationFrameworkServiceDefault() : ApplicationFrameworkService 
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+    actual override fun externalConnections(self: Passive, kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
     actual override fun shutdown() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

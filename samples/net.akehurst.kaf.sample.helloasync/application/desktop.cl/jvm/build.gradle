@@ -1,0 +1,27 @@
+plugins {
+    id 'application'
+}
+
+
+mainClassName = "net.akehurst.kaf.sample.hellouser.application.desktop.cl.jvm.Main"
+
+dependencies {
+    commonMainImplementation project(":application.desktop.cl.common")
+
+    commonMainImplementation "net.akehurst.kaf:kaf-common:$version_kaf"
+
+    // need this so that the gradle application plugin can find the kotlin lib
+    runtime project(path:':application.desktop.cl.jvm', configuration:'jvm8RuntimeElements')
+}
+kotlin {
+    sourceSets {
+        main {
+            dependsOn jvm8Main
+        }
+        test {
+            // Not required, but helps IntelliJ configure inter-project dependencies:
+            // https://youtrack.jetbrains.com/issue/KT-31179
+            dependsOn jvm8Test
+        }
+    }
+}
