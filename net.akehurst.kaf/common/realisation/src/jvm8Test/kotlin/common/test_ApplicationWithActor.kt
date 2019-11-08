@@ -36,7 +36,7 @@ class test_ApplicationWithActor {
         fun writeln(text: String?)
     }
 
-    class Greeter(afId: String) : Actor {
+    class Greeter(override val owner:Owner, afId: String) : Actor {
         interface Shutdown {
             fun shutdown()
         }
@@ -58,7 +58,7 @@ class test_ApplicationWithActor {
 
     }
 
-    class Console(afId: String) : Actor, Output {
+    class Console(override val owner:Owner, afId: String) : Actor, Output {
         override val af = afActor(this, afId)
 
         override fun writeln(text: String?) {
@@ -68,8 +68,8 @@ class test_ApplicationWithActor {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter("$afId.greeter")
-        val console = Console("$afId.console")
+        val greeter = Greeter(this,"greeter")
+        val console = Console(this,"console")
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {
@@ -82,11 +82,6 @@ class test_ApplicationWithActor {
 
             initialise = {
                 greeter.output = console.af.receiver(Output::class)
-            }
-
-            execute = {
-            }
-            terminate = {
             }
         }
     }

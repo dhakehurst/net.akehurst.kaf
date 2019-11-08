@@ -16,10 +16,7 @@
 
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.AFPassive
-import net.akehurst.kaf.common.api.ApplicationFrameworkService
-import net.akehurst.kaf.common.api.ExternalConnection
-import net.akehurst.kaf.common.api.Passive
+import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.service.api.serviceReference
 import net.akehurst.kaf.service.logging.api.logger
 import kotlin.reflect.KClass
@@ -34,14 +31,28 @@ inline fun afPassive(self: Passive, id: String, init: AFPassiveDefault.Builder.(
 
 open class AFPassiveDefault(
         override val self: Passive,
-        override val identity: String
+        val selfIdentity: String
 ) : AFPassive {
 
-    class Builder(val self: Passive, val identity: String) {
+    class Builder(val self: Passive, val selfIdentity: String) {
         fun build(): AFPassive {
-            return AFPassiveDefault(self, identity)
+            return AFPassiveDefault(self, selfIdentity)
         }
     }
+
+    override val owner: AFOwner get() = self.owner.af
+    val ownerIdentity: String
+        get() {
+            val o = owner
+            return if (null == o) {
+                ""
+            } else {
+                o.identity + "."
+            }
+        }
+
+    override val identity: String
+        get() = "${ownerIdentity}$selfIdentity"
 
     val framework by serviceReference<ApplicationFrameworkService>()
     override val log by logger("logging")

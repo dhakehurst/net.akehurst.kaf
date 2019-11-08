@@ -52,7 +52,7 @@ class test_PersystentStoreNeo4j : Application {
         }
     }
 
-    val sut = PersistentStoreNeo4j("sut")
+    val sut = PersistentStoreNeo4j(this, "sut")
 
     @BeforeTest
     fun startup() {
@@ -107,8 +107,7 @@ class test_PersystentStoreNeo4j : Application {
         sut.create(A::class, a)
 
         // when
-        val filter = FilterProperty("prop", "a")
-        val actual = sut.read(A::class, setOf(filter))
+        val actual = sut.read(A::class, "a")
 
         // then
         val expected = a
@@ -129,8 +128,7 @@ class test_PersystentStoreNeo4j : Application {
         sut.createAll(A::class, setOfA)
 
         // when
-        val filter = FilterProperty("prop", "a")
-        val actual = sut.readAll(A::class, emptySet())
+        val actual = sut.readAll(A::class, setOf("a1", "a2", "a3", "a4"))
 
         // then
         val expected = setOfA

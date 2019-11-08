@@ -34,13 +34,13 @@ open class AFComponentDefault(
         override val port: MapNonNull<String, Port>,
         initialise: suspend () -> Unit,
         execute: suspend () -> Unit,
-        terminate: suspend () -> Unit
-) : AFActiveDefault(self, afIdentity, initialise, execute, terminate), AFComponent {
+        finalise: suspend () -> Unit
+) : AFActiveDefault(self, afIdentity, initialise, execute, finalise), AFComponent {
 
     class Builder(val self: Component, val id: String) {
         var initialise: suspend () -> Unit = {}
         var execute: suspend () -> Unit = {}
-        var terminate: suspend () -> Unit = {}
+        var finalise: suspend () -> Unit = {}
         val ports = mutableMapNonNullOf<String, Port>()
 
         fun port(portId: String, init: AFPortDefault.Builder.() -> Unit): Port {
@@ -52,7 +52,7 @@ open class AFComponentDefault(
         }
 
         fun build(): AFComponent {
-            return AFComponentDefault(id, self, ports, initialise, execute, terminate)
+            return AFComponentDefault(id, self, ports, initialise, execute, finalise)
         }
     }
 

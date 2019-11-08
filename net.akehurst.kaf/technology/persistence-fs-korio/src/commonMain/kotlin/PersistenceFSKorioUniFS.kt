@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package net.akehurst.kaf.technology.persistence.neo4j
+package net.akehurst.kaf.technology.persistence.fs.korio
 
 import com.soywiz.korio.file.std.uniVfs
 import net.akehurst.kaf.common.api.Component
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.runBlocking
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
 import net.akehurst.kotlin.komposite.common.DatatypeRegistry
 
 class PersistenceFSKorioUniFS(
+        override val owner: Owner,
         afId: String
 ) : Component, PersistenceFilesystem {
-
-    private val _registry = DatatypeRegistry()
 
     // --- KAF ---
     override val af = afComponent(this, afId) {
@@ -36,10 +36,6 @@ class PersistenceFSKorioUniFS(
         }
         initialise = {
             self.af.port["fs"].connectInternal(self)
-        }
-        execute = {
-        }
-        terminate = {
         }
     }
 

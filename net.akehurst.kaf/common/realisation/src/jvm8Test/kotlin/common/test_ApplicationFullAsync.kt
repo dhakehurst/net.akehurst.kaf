@@ -42,7 +42,7 @@ class test_ApplicationFullAsync {
         suspend fun doneWriteln(text: String?)
     }
 
-    class Greeter(afId: String) : Actor, OutputNotification {
+    class Greeter(override val owner:Owner, afId: String) : Actor, OutputNotification {
         interface Shutdown {
             fun shutdown()
         }
@@ -54,7 +54,7 @@ class test_ApplicationFullAsync {
         val greeting: String? by commandLineValue() { confGreeting }
 
         @ExperimentalTime
-        override val af = afActor(this, afId) {
+        override val af = afActor( this, afId) {
             preExecute = {
                 self.af.send {
                     output.writeln(greeting)
@@ -69,7 +69,7 @@ class test_ApplicationFullAsync {
         }
     }
 
-    class Console(afId: String) : Actor, OutputRequest {
+    class Console(override val owner:Owner, afId: String) : Actor, OutputRequest {
         lateinit var outputNotification: OutputNotification
 
         override val af = afActor(this, afId)
@@ -82,8 +82,8 @@ class test_ApplicationFullAsync {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter("$afId.greeter")
-        val console = Console("$afId.console")
+        val greeter = Greeter(this, "greeter")
+        val console = Console(this, "console")
 
         @ExperimentalTime
         override val af = afApplication(this, afId) {
@@ -98,11 +98,6 @@ class test_ApplicationFullAsync {
             initialise = {
                 greeter.output = console.af.receiver(OutputRequest::class)
                 console.outputNotification = greeter.af.receiver(OutputNotification::class)
-            }
-
-            execute = {
-            }
-            terminate = {
             }
         }
     }

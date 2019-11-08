@@ -35,11 +35,6 @@ class test_PersistenceFSKorioUniFS : Application {
             ConfigurationMap(mutableMapOf(
             ))
         }
-        initialise = {}
-        execute = {
-        }
-        terminate = {
-        }
     }
 
 }

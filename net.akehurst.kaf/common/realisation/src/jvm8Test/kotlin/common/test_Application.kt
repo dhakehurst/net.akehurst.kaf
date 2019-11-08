@@ -36,7 +36,7 @@ class test_Application {
         fun writeln(text: String?)
     }
 
-    class Greeter(afId: String) : Active {
+    class Greeter(override val owner: Owner, afId: String) : Active {
 
         lateinit var output: Output
 
@@ -50,7 +50,7 @@ class test_Application {
         }
     }
 
-    class Console(afId: String) : Passive, Output {
+    class Console(override val owner: Owner, afId: String) : Passive, Output {
         override val af = afPassive(this, afId)
 
         override fun writeln(text: String?) {
@@ -59,9 +59,8 @@ class test_Application {
     }
 
     class TestApplication(afId: String) : Application {
-
-        val greeter = Greeter("$afId.greeter")
-        val console = Console("$afId.console")
+        val greeter = Greeter(this, "greeter")
+        val console = Console(this, "console")
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {
@@ -76,6 +75,7 @@ class test_Application {
                 greeter.output = console
             }
         }
+
     }
 
 

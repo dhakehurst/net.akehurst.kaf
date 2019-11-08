@@ -74,10 +74,6 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
             ))
         }
         initialise = {}
-        execute = {
-        }
-        terminate = {
-        }
     }
 
     val sut = PersistentStoreNeo4j("sut")
@@ -182,8 +178,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         sut.create(AddressBook::class, abk)
 
         // when
-        val filter = FilterProperty("title", "friends")
-        val actual = sut.read(AddressBook::class, setOf(filter))
+        val actual = sut.read(AddressBook::class, "friends")
 
         // then
         val expected = abk
@@ -210,8 +205,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         sut.create(AddressBook::class, abk)
 
         // when
-        val filter = FilterProperty("title", "friends")
-        val actual = sut.read(AddressBook::class, setOf(filter))
+        val actual = sut.read(AddressBook::class, "friends")
 
         // then
         val expected = abk
@@ -239,8 +233,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         sut.create(AddressBook::class, abk)
 
         // when
-        val filter = FilterProperty("title", "friends")
-        val actual = sut.read(AddressBook::class, setOf(filter))
+        val actual = sut.read(AddressBook::class, "friends")
 
         // then
         val expected = abk

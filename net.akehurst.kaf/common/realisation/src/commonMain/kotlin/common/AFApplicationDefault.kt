@@ -17,6 +17,7 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.AFApplication
+import net.akehurst.kaf.common.api.AFOwner
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.service.api.Service
 import kotlin.reflect.KClass
@@ -26,9 +27,9 @@ expect inline fun afApplication(self: Application, id: String, init: AFApplicati
 expect class AFApplicationDefault : AFApplication {
     class Builder {
         inline fun <reified T:Service> defineService(serviceClass: KClass<T>, noinline func:(commandLineArgs: List<String>)->T)
-        var initialise: suspend () -> Unit
-        var execute: suspend () -> Unit
-        var terminate: suspend () -> Unit
+        var initialise: suspend (self:Application) -> Unit
+        var execute: suspend (self:Application) -> Unit
+        var finalise: suspend (self:Application) -> Unit
         fun build(): AFApplication
     }
 }

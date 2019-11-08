@@ -19,6 +19,7 @@ package net.akehurst.kaf.technology.persistence.neo4j
 import com.soywiz.klock.DateTime
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Identifiable
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
@@ -59,15 +60,16 @@ import kotlin.reflect.KClass
 // TODO: improve performance
 // [https://medium.com/neo4j/5-tips-tricks-for-fast-batched-updates-of-graph-structures-with-neo4j-and-cypher-73c7f693c8cc]
 class PersistentStoreNeo4j(
+        override val owner: Owner,
         afId: String
 ) : PersistentStore, Component {
 
     private val _registry = DatatypeRegistry()
 
     // --- injected ---
-    val embeddedNeo4jDirectory: String by configuredValue("configuration") { ".neo4j" }
-    val embeddedNeo4jAddress: String by configuredValue("configuration") { "localhost" }
-    val embeddedNeo4jPort: Int by configuredValue("configuration") { 7777 }
+    val embeddedNeo4jDirectory: String by configuredValue { ".neo4j" }
+    val embeddedNeo4jAddress: String by configuredValue { "localhost" }
+    val embeddedNeo4jPort: Int by configuredValue { 7777 }
 
     // --- set when config is called ---
     private var _neo4jService: GraphDatabaseService? = null
@@ -89,7 +91,8 @@ class PersistentStoreNeo4j(
                 val cypherValue = if (null == mapper) {
                     CypherValue(primitive)
                 } else {
-                    val cy = (mapper as PrimitiveMapper<Any, Any>?)?.toRaw?.invoke(primitive) ?: throw PersistenceException("Do not know how to convert ${primitive::class} to json, did you register its converter")
+                    val cy = (mapper as PrimitiveMapper<Any, Any>?)?.toRaw?.invoke(primitive)
+                            ?: throw PersistenceException("Do not know how to convert ${primitive::class} to json, did you register its converter")
                     val raw = mapper.toRaw(primitive)
                     CypherValue(raw)
                 }
@@ -295,7 +298,7 @@ class PersistentStoreNeo4j(
         }
         execute = {
         }
-        terminate = {
+        finalise = {
             if (null != _neo4jService) {
                 _neo4jService?.shutdown()
             }
@@ -337,11 +340,11 @@ class PersistentStoreNeo4j(
             }
         }
         af.log.debug { "success: connected to Neo4j: ${uri} as user ${user}" }
-        this.neo4JReader = Neo4JReader(this.af.identity + ".neo4JReader", this._neo4j)
+        this.neo4JReader = Neo4JReader(this.af.self, "neo4JReader", this._neo4j)
         af.doInjections(this.neo4JReader)
 
         //default DateTime mapping
-        val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*,*>>()
+        val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
         defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, ZonedDateTime::class,
                 { primitive ->
                     //primitive.toString("yyyy-MM-dd'T'HH:mm:ss")
@@ -355,7 +358,7 @@ class PersistentStoreNeo4j(
 
         val komposite = settings["komposite"] as String
         if (settings.containsKey("primitiveMappers")) {
-            defaultPrimitiveMappers.putAll( settings["primitiveMappers"] as Map<KClass<*>, PrimitiveMapper<*,*>> )
+            defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<*>, PrimitiveMapper<*, *>>)
         }
         af.log.debug { "trying: to register komposite information: $komposite" }
         this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, emptyMap())
@@ -386,10 +389,10 @@ class PersistentStoreNeo4j(
 
     override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
         af.log.trace { "readAll(${type.simpleName}, $identities)" }
-        val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.session().typeSystem())
-        val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val itemSet = emptySet<T>() //this.convertObjects(dt, records, rootNodeName)
-        return itemSet as Set<T>
+        val itemSet = identities.map {
+            read(type, it)
+        }.toSet()
+        return itemSet
     }
 
     override fun <T : Identifiable> update(type: KClass<T>, item: T) {

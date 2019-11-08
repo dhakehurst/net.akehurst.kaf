@@ -26,6 +26,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
 import net.akehurst.kaf.common.api.AFComponent
 import net.akehurst.kaf.common.api.Component
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.comms.api.MessageChannel
@@ -33,10 +34,11 @@ import net.akehurst.kaf.technology.webserver.api.Webserver
 import java.util.concurrent.TimeUnit
 
 class WebserverKtor(
+        override val owner: Owner,
         afId: String
 ) : Component {
 
-    private val port: Int by configuredValue() { 9090 }
+    private val port: Int by configuredValue { 9090 }
 
     lateinit var messageChannel: MessageChannel<*>
 
@@ -64,7 +66,7 @@ class WebserverKtor(
         execute = {
             server.start(false)
         }
-        terminate = {
+        finalise = {
             server.stop(0,0,TimeUnit.SECONDS)
         }
     }

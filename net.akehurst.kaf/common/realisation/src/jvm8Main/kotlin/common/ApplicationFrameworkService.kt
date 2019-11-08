@@ -50,13 +50,13 @@ actual class ApplicationFrameworkServiceDefault(
     private fun log(): Logger {
         if (null == this.logger) {
             // logger service may not be initialised yet
-            val lgs = this.applicationServices[LoggingService::class] as LoggingService
+            val lgs = this.applicationServices[LoggingService::class] as LoggingService? ?: throw ApplicationInstantiationException("No logging service defined")
             this.logger = lgs.create(this.afId)
         }
         return this.logger!!
     }
 
-    actual override fun partsOf(composite: Passive): List<Passive> {
+    actual override fun partsOf(composite: Owner): List<Passive> {
         val walker = ApplicationCompositionWalker()
         val list = mutableListOf<Passive>()
         walker.walkAfParts(composite) { part, property ->
@@ -73,7 +73,7 @@ actual class ApplicationFrameworkServiceDefault(
         return proxy as T
     }
 
-    actual override fun doInjections(commandLineArgs: List<String>, root: Passive) {
+    actual override fun doInjections(commandLineArgs: List<String>, root: AFHolder) {
         this.injectServiceReferences(root)
         injectAfLoggers(root)
 
@@ -102,7 +102,7 @@ actual class ApplicationFrameworkServiceDefault(
         application.af.terminate()
     }
 
-    private fun injectAfLoggers(root: Passive) {
+    private fun injectAfLoggers(root: AFHolder) {
         log().trace { "injectAfLoggers" }
         val logService = this.applicationServices[LoggingService::class] ?: throw ServiceNotFoundException(LoggingService::class)
 /*
@@ -147,7 +147,7 @@ actual class ApplicationFrameworkServiceDefault(
         }
     }
 
-    private fun injectServiceReferences(root: Passive) {
+    private fun injectServiceReferences(root: AFHolder) {
         log().trace { "injectServiceReferences" }
 
         val fwService = this.applicationServices[ApplicationFrameworkService::class] ?: throw ServiceNotFoundException(ApplicationFrameworkService::class)
@@ -179,7 +179,7 @@ actual class ApplicationFrameworkServiceDefault(
 
     }
 
-    private fun injectConfigurationValues(root: Passive) {
+    private fun injectConfigurationValues(root: AFHolder) {
         log().trace { "injectConfigurationValues" }
         val walker = ApplicationCompositionWalker()
         walker.walkDepthFirst(root, { obj ->
@@ -202,7 +202,7 @@ actual class ApplicationFrameworkServiceDefault(
         }
     }
 
-    private fun injectCommandLineArgs(root: Passive) {
+    private fun injectCommandLineArgs(root: AFHolder) {
         log().trace { "injectCommandLineArgs" }
         val walker = ApplicationCompositionWalker()
         walker.walkDepthFirst(root, { obj ->

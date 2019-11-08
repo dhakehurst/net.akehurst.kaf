@@ -13,25 +13,23 @@ actual inline fun afApplication(self: Application, id: String, init: AFApplicati
 
 actual class AFApplicationDefault(
         override val self: Application,
-        afIdentity: String,
-        val services: Map<String, Service>,
+        override val identity: String,
+        val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
         initialise: () -> Unit,
         execute: () -> Unit,
-        terminate: () -> Unit
-) : AFPassiveDefault(self, afIdentity), AFApplication {
-
-
+        finalise: () -> Unit
+) : AFApplication {
     actual class Builder(
             val self: Application,
             val id: String
     ) {
-        actual var initialise: suspend () -> Unit
+        actual var initialise: suspend (self:Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
-        actual var execute: suspend () -> Unit
+        actual var execute: suspend (self:Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
-        actual var terminate: suspend () -> Unit
+        actual var finalise: suspend (self:Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
 
@@ -41,9 +39,13 @@ actual class AFApplicationDefault(
         actual fun build(): AFApplication {
             TODO("not implemented")
         }
-
-
     }
+
+    private val _services = mutableMapOf<KClass<*>, Service>()
+    override fun <T : Service> service(serviceClass: KClass<T>): T {
+        TODO()
+    }
+
 
     override fun startAsync(commandLineArgs: List<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

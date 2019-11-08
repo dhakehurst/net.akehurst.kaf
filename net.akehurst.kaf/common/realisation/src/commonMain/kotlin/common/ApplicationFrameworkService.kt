@@ -16,9 +16,7 @@
 
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.ApplicationFrameworkService
-import net.akehurst.kaf.common.api.ExternalConnection
-import net.akehurst.kaf.common.api.Passive
+import net.akehurst.kaf.common.api.*
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -26,9 +24,9 @@ import kotlin.reflect.KProperty
 expect fun <T> runBlocking(block:suspend () -> T) : T
 
 expect class ApplicationFrameworkServiceDefault : ApplicationFrameworkService {
-    override fun partsOf(composite: Passive) : List<Passive>
+    override fun partsOf(composite: Owner) : List<Passive>
     override fun <T : Any> receiver(forInterface: KClass<*>, invokeMethod: (proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
-    override fun doInjections(commandLineArgs: List<String>, root: Passive)
+    override fun doInjections(commandLineArgs: List<String>, root: AFHolder)
     override fun externalConnections(self: Passive, kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
     override fun shutdown()
     override fun terminate()

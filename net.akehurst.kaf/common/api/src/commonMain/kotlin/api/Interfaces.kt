@@ -24,12 +24,13 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 interface ApplicationFrameworkService : Service {
-    fun partsOf(composite: Passive): List<Passive>
+    fun partsOf(composite: Owner): List<Passive>
     /**
      * return the external connections of self that have return type assignable from kclass
      */
     fun externalConnections(self: Passive, kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
-    fun doInjections(commandLineArgs: List<String>, root: Passive)
+
+    fun doInjections(commandLineArgs: List<String>, root: AFHolder)
     fun <T : Any> receiver(forInterface: KClass<*>, invokeMethod: (proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
     /**
      * request application shutdown
@@ -48,41 +49,29 @@ interface Identifiable {
     val identity: Any
 }
 
-interface AFPassive : Identifiable {
-    val self: Passive
-    override val identity: String
-    val log: Logger
-    fun externalConnections(kClass: KClass<*>) : Map<KProperty<*>, ExternalConnection<*>>
-    fun doInjections(root: Passive)
+interface AFHolder {
+    val af: AF
 }
 
-interface Passive {
-    val af: AFPassive
+interface Owner : AFHolder {
+    override val af: AFOwner
 }
 
-interface AFActive : AFPassive {
-    override val self: Active
-    suspend fun start()
-    suspend fun join()
-    suspend fun shutdown()
-    suspend fun terminate()
-    fun <T : Any> receiver(forInterface: KClass<*>): T
+interface Passive : Owner {
+    val owner: Owner
+    override val af: AFPassive
 }
 
-interface Active : Passive {
+interface Active : Passive, Owner {
     override val af: AFActive
-}
-
-interface AFActor : AFActive {
-    override val self: Actor
-    /** for placing behavior directly on the actors processing queue */
-    fun receive(callable: KCallable<*>, context: AsyncCallContext, action: suspend () -> Unit)
-
-    suspend fun send(toSend: suspend () -> Unit): AsyncCall
 }
 
 interface Actor : Active {
     override val af: AFActor
+}
+
+interface Component : Active {
+    override val af: AFComponent
 }
 
 interface Port {
@@ -117,25 +106,66 @@ interface Port {
     fun <T : Any> required(requiredInterface: KClass<T>): T
 }
 
-interface AFComponent : AFActive {
+interface Application : Owner {
+    override val af: AFApplication
+}
+
+interface AF : Identifiable {
+    override val identity: String
+}
+
+interface AFOwner : AF {
+}
+
+interface AFPassive : AFOwner {
+    val self: Passive
+    val owner: AFOwner?
+    val log: Logger
+    fun externalConnections(kClass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
+    fun doInjections(root: Passive)
+}
+
+interface AFActive : AFPassive, AFOwner {
+    override val self: Active
+    suspend fun start()
+    suspend fun join()
+    suspend fun shutdown()
+    suspend fun terminate()
+    fun <T : Any> receiver(forInterface: KClass<*>): T
+}
+
+interface AFActor : AFActive {
+    override val self: Actor
+    /** for placing behavior directly on the actors processing queue */
+    fun receive(callable: KCallable<*>, context: AsyncCallContext, action: suspend () -> Unit)
+
+    suspend fun send(toSend: suspend () -> Unit): AsyncCall
+}
+
+interface AFComponent : AFActive, AFOwner {
     override val self: Component
     val port: MapNonNull<String, Port>
     fun <T : Any> portOut(requiredInterface: KClass<T>): T
     fun <T : Any> portIn(providedInterface: KClass<T>): T
 }
 
-interface Component : Active {
-    override val af: AFComponent
-}
+interface AFApplication : AFOwner {
+    val self: Application
+    fun <T : Service> service(serviceClass: KClass<T>): T
 
-interface AFApplication : AFPassive {
-    override val self: Application
     fun startAsync(commandLineArgs: List<String>)
-    fun startBlocking(commandLineArgs: List<String>)
-    fun shutdown()
-    fun terminate()
-}
 
-interface Application : Passive {
-    override val af: AFApplication
+    fun startBlocking(commandLineArgs: List<String>)
+
+    /**
+     * stop the application (politely) and execute the 'finalise' behaviour,
+     * parts are shutdown first, with the parent 'waiting' until all parts are shutdown
+     */
+    fun shutdown()
+
+    /**
+     * stop the application (forcefully) and do not execute the 'finalise' behaviour,
+     * do not wait for parts to shutdown
+     */
+    fun terminate()
 }

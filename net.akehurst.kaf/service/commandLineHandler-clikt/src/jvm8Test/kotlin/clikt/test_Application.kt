@@ -20,6 +20,7 @@ import com.github.ajalt.clikt.core.NoRunCliktCommand
 import net.akehurst.kaf.common.api.Active
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.api.CompositePart
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.realisation.afActive
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
@@ -32,18 +33,19 @@ import kotlin.test.Test
 
 class test_Application {
 
-    class TestApplication(id: String) : Application {
+    class ActivePart(override val owner:Owner) : Active {
+        val greeting: String? by commandLineValue() { "greeting" }
 
-        @CompositePart
-        val comp = object : Active {
-            val greeting: String? by commandLineValue() { "greeting" }
-
-            override val af = afActive(this, "comp") {
-                execute = {
-                    self.af.log.info { greeting }
-                }
+        override val af = afActive(this, "comp") {
+            execute = {
+                self.af.log.info { greeting }
             }
         }
+    }
+
+    class TestApplication(id: String) : Application {
+
+        val comp: Active = ActivePart(this)
 
         override val af = afApplication(this, id) {
             defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }

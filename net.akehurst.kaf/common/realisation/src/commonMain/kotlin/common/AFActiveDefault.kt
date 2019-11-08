@@ -17,6 +17,7 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.AFActive
+import net.akehurst.kaf.common.api.AFOwner
 import net.akehurst.kaf.common.api.Active
 import net.akehurst.kaf.common.api.ActiveException
 import net.akehurst.kotlinx.reflect.reflect
@@ -34,15 +35,15 @@ open class AFActiveDefault(
         afIdentity: String,
         val initialise: suspend () -> Unit,
         val execute: suspend () -> Unit,
-        val terminateFunc: suspend () -> Unit
+        val finalise: suspend () -> Unit
 ) : AFPassiveDefault(self, afIdentity), AFActive {
 
     class Builder(val self: Active, val id: String) {
         var initialise: suspend () -> Unit = {}
         var execute: suspend () -> Unit = {}
-        var terminate: suspend () -> Unit = {}
+        var finalise: suspend () -> Unit = {}
         fun build(): AFActive {
-            return AFActiveDefault(self, id, initialise, execute, terminate)
+            return AFActiveDefault(self, id, initialise, execute, finalise)
         }
     }
 
@@ -77,7 +78,9 @@ open class AFActiveDefault(
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
             it.af.shutdown()
+       //     it.af.join()
         }
+        this.finalise()
     }
 
     override suspend fun terminate() {
@@ -86,7 +89,6 @@ open class AFActiveDefault(
         activeParts.forEach {
             it.af.terminate()
         }
-        this.terminateFunc()
     }
 
     override fun <T : Any> receiver(forInterface:KClass<*>): T {

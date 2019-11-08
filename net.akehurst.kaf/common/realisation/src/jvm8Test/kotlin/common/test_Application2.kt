@@ -18,6 +18,7 @@ package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.Active
 import net.akehurst.kaf.common.api.Application
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
@@ -36,7 +37,7 @@ class test_Application2 {
         fun writeln(text: String?)
     }
 
-    class Greeter(afId: String) : Active {
+    class Greeter(override val owner:Owner, afId: String) : Active {
 
         lateinit var output: Output
 
@@ -50,7 +51,7 @@ class test_Application2 {
         }
     }
 
-    class Console(afId: String) : Active, Output {
+    class Console(override val owner:Owner, afId: String) : Active, Output {
         override val af = afActive(this, afId)
 
         override fun writeln(text: String?) {
@@ -60,8 +61,8 @@ class test_Application2 {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter("$afId.greeter")
-        val console = Console("$afId.console")
+        val greeter = Greeter(this, "greeter")
+        val console = Console(this, "console")
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {

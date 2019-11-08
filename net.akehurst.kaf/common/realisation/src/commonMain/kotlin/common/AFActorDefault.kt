@@ -68,16 +68,16 @@ open class AFActorDefault(
         afIdentity: String,
         val initialise: suspend () -> Unit,
         val preExecute: suspend () -> Unit,
-        val terminateFunc: suspend () -> Unit
+        val finalise: suspend () -> Unit
 ) : AFPassiveDefault(self, afIdentity), AFActor {
 
     class Builder(val self: Actor, val id: String) {
         var initialise: suspend () -> Unit = {}
         var preExecute: suspend () -> Unit = {}
-        var terminate: suspend () -> Unit = {}
+        var finalise: suspend () -> Unit = {}
 
         fun build(): AFActor {
-            return AFActorDefault(self, id, initialise, preExecute, terminate)
+            return AFActorDefault(self, id, initialise, preExecute, finalise)
         }
     }
 
@@ -196,23 +196,26 @@ open class AFActorDefault(
     }
 
     override suspend fun join() {
-        log.trace { "join" }
+        log.trace { "join begin" }
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
             it.af.join()
         }
         job.join()
+        log.trace { "join end" }
     }
 
     override suspend fun shutdown() {
-        log.trace { "shutdown" }
+        log.trace { "shutdown begin" }
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
             it.af.shutdown()
+            //it.af.join()
         }
-        terminateFunc()
+        finalise()
         this.inbox.close()
-        job.join()
+        job.cancel("af.shutdown() called")
+        log.trace { "shutdown end" }
     }
 
     override suspend fun terminate() {
@@ -222,7 +225,6 @@ open class AFActorDefault(
         activeParts.forEach {
             it.af.terminate()
         }
-        terminateFunc()
         this.inbox.cancel()
         job.cancelAndJoin()
     }

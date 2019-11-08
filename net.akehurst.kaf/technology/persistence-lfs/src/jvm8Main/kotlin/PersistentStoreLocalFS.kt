@@ -16,46 +16,18 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import com.soywiz.klock.DateTime
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Identifiable
+import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.realisation.afComponent
-import net.akehurst.kaf.service.configuration.api.configuredValue
-import net.akehurst.kaf.technology.persistence.api.Filter
-import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
-import net.akehurst.kotlin.komposite.api.Datatype
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.komposite.common.DatatypeRegistry
-import net.akehurst.kotlin.komposite.common.WalkInfo
-import net.akehurst.kotlin.komposite.common.get
-import net.akehurst.kotlin.komposite.common.kompositeWalker
-import net.akehurst.kotlinx.collections.Stack
-import java.io.File
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.Set
-import kotlin.collections.all
-import kotlin.collections.dropLast
-import kotlin.collections.emptyList
-import kotlin.collections.emptyMap
-import kotlin.collections.emptySet
-import kotlin.collections.flatMap
-import kotlin.collections.forEach
-import kotlin.collections.joinToString
-import kotlin.collections.last
-import kotlin.collections.listOf
-import kotlin.collections.mutableMapOf
-import kotlin.collections.plus
-import kotlin.collections.set
 import kotlin.reflect.KClass
 
 // TODO: improve performance
 // [https://medium.com/neo4j/5-tips-tricks-for-fast-batched-updates-of-graph-structures-with-neo4j-and-cypher-73c7f693c8cc]
 class PersistentStoreLocalFS(
+        override val owner: Owner,
         afId: String
 ) : PersistentStore, Component {
 
@@ -74,11 +46,6 @@ class PersistentStoreLocalFS(
         }
         initialise = {
             self.af.port["persist"].connectInternal(self)
-        }
-        execute = {
-        }
-        terminate = {
-
         }
     }
 

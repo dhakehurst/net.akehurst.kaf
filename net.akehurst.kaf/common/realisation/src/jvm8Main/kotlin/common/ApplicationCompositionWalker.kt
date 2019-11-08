@@ -16,11 +16,7 @@
 
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.CompositePart
-import net.akehurst.kaf.common.api.Active
-import net.akehurst.kaf.common.api.Application
-import net.akehurst.kaf.common.api.Component
-import net.akehurst.kaf.common.api.Passive
+import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.service.api.Service
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
@@ -41,7 +37,7 @@ class ApplicationCompositionWalker {
         val COMPOSITE_PARTS_AF = listOf(Service::class.starProjectedType)
     }
 
-    fun walkDepthFirst(self: Passive, selfFunc: (obj: Passive) -> Unit, propFunc: (obj: Passive, property: KProperty<*>) -> Unit) {
+    fun walkDepthFirst(self: AFHolder, selfFunc: (obj: AFHolder) -> Unit, propFunc: (obj: AFHolder, property: KProperty<*>) -> Unit) {
         when (self) {
             is Application -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_APPLICATION)
             is Service -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_SERVICE)
@@ -52,7 +48,7 @@ class ApplicationCompositionWalker {
         selfFunc(self)
     }
 
-    private fun _walkDepthFirst(self: Passive, selfFunc: (obj: Passive) -> Unit, propFunc: (obj: Passive, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
+    private fun _walkDepthFirst(self: AFHolder, selfFunc: (obj: AFHolder) -> Unit, propFunc: (obj: AFHolder, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
         self::class.members.filter { it is KProperty<*> }.forEach { property ->
             if (property is KProperty<*>) {
                 propFunc(self, property)
@@ -79,7 +75,7 @@ class ApplicationCompositionWalker {
         }
     }
 
-    fun walkAfParts(self: Passive, partFunc: (part: Passive, property: KProperty<*>) -> Unit) {
+    fun walkAfParts(self: Owner, partFunc: (part: Passive, property: KProperty<*>) -> Unit) {
         when (self) {
             is Application -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_APPLICATION)
             is Service -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_SERVICE)
@@ -89,7 +85,7 @@ class ApplicationCompositionWalker {
         }
     }
 
-    private fun _walkAfParts(self: Passive, partFunc: (part: Passive, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
+    private fun _walkAfParts(self: Owner, partFunc: (part: Passive, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
         self::class.members.filter { it is KProperty<*> }.forEach { property ->
             if (property is KProperty<*>) {
                 if (compositeTypes.any { property.returnType.isSubtypeOf(it) }) {

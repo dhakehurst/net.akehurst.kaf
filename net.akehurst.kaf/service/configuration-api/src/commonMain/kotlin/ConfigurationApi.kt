@@ -16,32 +16,33 @@
 
 package net.akehurst.kaf.service.configuration.api
 
+import net.akehurst.kaf.common.api.AFHolder
 import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.service.api.Service
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 interface ConfigurationService : Service {
-    fun <T> get(path: String, default: () -> T): T
+    fun <T : Any> get(path: String, default: () -> T): T
 }
 
 fun <T : Any> configuredValue(default: () -> T): ConfiguredValue<T> {
     return ConfiguredValue<T>(null, default)
 }
 
-fun <T : Any> configuredValue(name: String, default: () -> T): ConfiguredValue<T> {
-    return ConfiguredValue<T>(name, default)
+fun <T : Any> configuredValue(overridePropertyName: String, default: () -> T): ConfiguredValue<T> {
+    return ConfiguredValue<T>(overridePropertyName, default)
 }
 
 
 class ConfiguredValue<T : Any>(
         val overridePropertyName: String?,
         val default: () -> T
-) : ReadOnlyProperty<Passive, T> {
+) : ReadOnlyProperty<AFHolder, T> {
 
     lateinit var configuration: ConfigurationService
 
-    override fun getValue(thisRef: Passive, property: KProperty<*>): T {
+    override fun getValue(thisRef: AFHolder, property: KProperty<*>): T {
         val name = overridePropertyName ?: property.name
         val path = "${thisRef.af.identity}.${name}"
         return this.configuration.get(path, this.default)

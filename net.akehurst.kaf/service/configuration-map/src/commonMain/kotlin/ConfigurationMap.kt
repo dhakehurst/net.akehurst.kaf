@@ -21,7 +21,7 @@ import net.akehurst.kaf.service.configuration.api.ConfigurationService
 class ConfigurationMap(
         val values:MutableMap<String,Any>
 ) : ConfigurationService {
-    override fun <T> get(path: String, default:()->T): T {
-        return this.values[path] as T ?: default()
+    override fun <T : Any> get(path: String, default:()->T): T {
+        return this.values[path] as T? ?: default()
     }
 }
