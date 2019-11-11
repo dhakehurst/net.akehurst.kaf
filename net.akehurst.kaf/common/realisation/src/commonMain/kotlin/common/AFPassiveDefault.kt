@@ -54,7 +54,8 @@ open class AFPassiveDefault(
     override val identity: String
         get() = "${ownerIdentity}$selfIdentity"
 
-    val framework by serviceReference<ApplicationFrameworkService>()
+    override val framework by serviceReference<ApplicationFrameworkService>()
+
     override val log by logger("logging")
 
     override fun externalConnections(kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>> = framework.externalConnections(self, kclass)

@@ -19,6 +19,7 @@ package net.akehurst.kaf.technology.persistence.fs.korio
 import com.soywiz.korio.file.std.uniVfs
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Owner
+import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.runBlocking
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
@@ -29,13 +30,15 @@ class PersistenceFSKorioUniFS(
         afId: String
 ) : Component, PersistenceFilesystem {
 
+    lateinit var port_fs: Port
+
     // --- KAF ---
     override val af = afComponent(this, afId) {
-        port("fs") {
+        port_fs = port("fs") {
             provides(PersistenceFilesystem::class)
         }
         initialise = {
-            self.af.port["fs"].connectInternal(self)
+            port_fs.connectInternal(self)
         }
     }
 

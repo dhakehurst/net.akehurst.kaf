@@ -11,9 +11,11 @@ actual fun <T> runBlocking(block:suspend () -> T): T {
 }
 
 actual class ApplicationFrameworkServiceDefault() : ApplicationFrameworkService {
-    actual override fun <T : Any> receiver(forInterface: KClass<*>, invokeMethod: (proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T {
+
+    actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
+
     actual override fun doInjections(commandLineArgs: List<String>, root: AFHolder) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

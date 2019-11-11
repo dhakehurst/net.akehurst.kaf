@@ -10,7 +10,7 @@ dependencies {
 
     jvm8MainImplementation("io.ktor:ktor-websockets:$version_ktor")
     jvm8MainImplementation("io.ktor:ktor-server-core:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-jetty:$version_ktor")
+    jvm8MainImplementation("io.ktor:ktor-server-netty:$version_ktor")
 
     commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$version_coroutines") {
         isForce=true

@@ -66,15 +66,15 @@ data class SignalKey(val signal: KCallable<*>, val context: AsyncCallContext) {
 open class AFActorDefault(
         override val self: Actor,
         afIdentity: String,
-        val initialise: suspend () -> Unit,
-        val preExecute: suspend () -> Unit,
-        val finalise: suspend () -> Unit
+        val initialiseBlock: suspend (self:Actor) -> Unit,
+        val preExecuteBlock: suspend (self:Actor) -> Unit,
+        val finaliseBlock: suspend (self:Actor) -> Unit
 ) : AFPassiveDefault(self, afIdentity), AFActor {
 
     class Builder(val self: Actor, val id: String) {
-        var initialise: suspend () -> Unit = {}
-        var preExecute: suspend () -> Unit = {}
-        var finalise: suspend () -> Unit = {}
+        var initialise: suspend (self:Actor) -> Unit = {}
+        var preExecute: suspend (self:Actor) -> Unit = {}
+        var finalise: suspend (self:Actor) -> Unit = {}
 
         fun build(): AFActor {
             return AFActorDefault(self, id, initialise, preExecute, finalise)
@@ -165,10 +165,17 @@ open class AFActorDefault(
         return null
     }
 
+    override suspend fun initialise() {
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.initialise()
+        }
+        log.trace { "initialise" }
+        this.initialiseBlock(this.self)
+    }
+
     override suspend fun start() {
         log.trace { "start" }
-        log.trace { "initialise" }
-        this@AFActorDefault.initialise()
 
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
@@ -177,22 +184,14 @@ open class AFActorDefault(
 
         val asyncCallContext = AsyncCallContextDefault(self.af.identity)
         job = GlobalScope.launch(asyncCallContext) {
-
             log.trace { "preExecute" }
-            this@AFActorDefault.preExecute()
-
+            this@AFActorDefault.preExecuteBlock(self)
             inbox.consumeEach { signal ->
                 log.trace { "invoking: ${signal.signature.name}" }
                 signal.invoke(self)
             }
             inbox.close()
-
         }
-
-        activeParts.forEach {
-            it.af.join()
-        }
-
     }
 
     override suspend fun join() {
@@ -212,14 +211,14 @@ open class AFActorDefault(
             it.af.shutdown()
             //it.af.join()
         }
-        finalise()
+        log.trace { "finalise" }
+        finaliseBlock(this.self)
         this.inbox.close()
         job.cancel("af.shutdown() called")
         log.trace { "shutdown end" }
     }
 
     override suspend fun terminate() {
-        coroutineContext
         log.trace { "terminate" }
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
@@ -229,9 +228,9 @@ open class AFActorDefault(
         job.cancelAndJoin()
     }
 
-    override fun <T : Any> receiver(forInterface: KClass<*>): T {
+    override fun <T : Any> receiver(forInterface: KClass<T>): T {
         //TODO: cache receivers
-        return super.framework.receiver(forInterface) { proxy, callable, args ->
+        return super.framework.proxy(forInterface) { handler, proxy, callable, args ->
             //TODO: ....maybe it does not matter if self implements the interface..so long as it has an 'andWhen' called?
             val lastArg = args.lastOrNull()
             if (lastArg is Continuation<*>) {
@@ -253,21 +252,8 @@ open class AFActorDefault(
                     else -> throw ActorException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
                 }
             } else {
-                val asyncCallContext = AsyncCallContextDefault("new") //TODO: better id!
                 when {
-                    forInterface.isInstance(self) -> when (args.size) {
-                        //TODO: what asyncContext should we use here?
-                        0 -> receive0(callable, asyncCallContext) {
-                            self.reflect().call(callable.name, *args)
-                        }
-                        1 -> receive1(callable, asyncCallContext, args[0]) {
-                            self.reflect().call(callable.name, *args)
-                        }
-                        2 -> receive2(callable, asyncCallContext, args[0], args[1]) {
-                            self.reflect().call(callable.name, *args)
-                        }
-                        else -> TODO()
-                    }
+                    forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
                     else -> throw ActorException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
                 }
             }

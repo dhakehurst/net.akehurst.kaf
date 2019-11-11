@@ -25,6 +25,7 @@ import net.akehurst.kaf.service.configuration.api.ConfigurationService
 import net.akehurst.kaf.service.configuration.api.ConfiguredValue
 import net.akehurst.kaf.service.logging.api.Logger
 import net.akehurst.kaf.service.logging.api.LoggingService
+import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import kotlin.reflect.KCallable
@@ -65,9 +66,12 @@ actual class ApplicationFrameworkServiceDefault(
         return list
     }
 
-    actual override fun <T : Any> receiver(forInterface: KClass<*>, invokeMethod: (proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T {
-        val handler = { proxy: Any?, method: Method, args: Array<out Any> ->
-            invokeMethod.invoke(proxy, method.kotlinFunction!!, args)
+    actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T {
+        val handler = object: InvocationHandler {
+            override fun invoke(proxy: Any?, method: Method?, args: Array<out Any>?): Any? {
+                val args2 = args ?: emptyArray<Any>()
+                return invokeMethod.invoke(this, proxy, method?.kotlinFunction!!, args2)
+            }
         }
         val proxy = Proxy.newProxyInstance(forInterface.java.classLoader, arrayOf(forInterface.java), handler)
         return proxy as T
@@ -159,7 +163,7 @@ actual class ApplicationFrameworkServiceDefault(
             fwProperty2!!.isAccessible = true
             val fwRef2 = (fwProperty2 as KProperty1<Any, Any>).getDelegate(obj.af) as ServiceReference<Service>
             fwRef2.setValue(this, obj.af.identity, fwProperty2, fwService)
-            log().debug { "${obj.af.identity}.framework = service['framework']('${obj.af.identity}')" }
+            log().debug { "${obj.af.identity}.af.framework = service[${ApplicationFrameworkService::class.simpleName}]('${obj.af.identity}')" }
         }) { obj, property ->
             when {
                 property.returnType.isSubtypeOf(Service::class.starProjectedType) -> {
@@ -168,7 +172,7 @@ actual class ApplicationFrameworkServiceDefault(
                         val ref = (property as KProperty1<Any, Any>).getDelegate(obj) as ServiceReference<Service>
                         val service = this.applicationServices[ref.serviceClass] ?: throw ServiceNotFoundException(ref.serviceClass)
                         ref.setValue(obj, obj.af.identity, property, service)
-                        log().debug { "${obj.af.identity}.${property.name} = service['${ref.reference}']('${obj.af.identity}')" }
+                        log().debug { "${obj.af.identity}.${property.name} = service['${ref.serviceClass.simpleName}']('${obj.af.identity}')" }
                     }
                 }
             }

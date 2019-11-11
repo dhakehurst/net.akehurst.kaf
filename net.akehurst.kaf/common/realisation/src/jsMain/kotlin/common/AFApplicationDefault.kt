@@ -2,7 +2,9 @@ package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.AFApplication
 import net.akehurst.kaf.common.api.Application
+import net.akehurst.kaf.common.api.ApplicationFrameworkService
 import net.akehurst.kaf.service.api.Service
+import net.akehurst.kaf.service.api.serviceReference
 import kotlin.reflect.KClass
 
 actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
@@ -19,6 +21,7 @@ actual class AFApplicationDefault(
         execute: () -> Unit,
         finalise: () -> Unit
 ) : AFApplication {
+
     actual class Builder(
             val self: Application,
             val id: String
@@ -42,10 +45,11 @@ actual class AFApplicationDefault(
     }
 
     private val _services = mutableMapOf<KClass<*>, Service>()
+    override val framework by serviceReference<ApplicationFrameworkService>()
+
     override fun <T : Service> service(serviceClass: KClass<T>): T {
         TODO()
     }
-
 
     override fun startAsync(commandLineArgs: List<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

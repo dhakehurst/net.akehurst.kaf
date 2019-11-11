@@ -29,11 +29,11 @@ import kotlin.reflect.full.starProjectedType
 class ApplicationCompositionWalker {
 
     companion object {
-        val COMPOSITE_PARTS_APPLICATION = listOf(Service::class.starProjectedType, Component::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
+        val COMPOSITE_PARTS_APPLICATION = listOf(Service::class.starProjectedType, Component::class.starProjectedType, Actor::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
         val COMPOSITE_PARTS_SERVICE = listOf(Service::class.starProjectedType, Passive::class.starProjectedType)
-        val COMPOSITE_PARTS_COMPONENT = listOf(Service::class.starProjectedType, Component::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
-        val COMPOSITE_PARTS_ACTIVE = listOf(Service::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
-        val COMPOSITE_PARTS_IDENTIFIABLE = emptyList<KType>()
+        val COMPOSITE_PARTS_COMPONENT = listOf(Service::class.starProjectedType, Component::class.starProjectedType, Actor::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
+        val COMPOSITE_PARTS_ACTIVE = listOf(Service::class.starProjectedType, Actor::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
+        val COMPOSITE_PARTS_PASSIVE = emptyList<KType>()
         val COMPOSITE_PARTS_AF = listOf(Service::class.starProjectedType)
     }
 
@@ -43,7 +43,7 @@ class ApplicationCompositionWalker {
             is Service -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_SERVICE)
             is Component -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_COMPONENT)
             is Active -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_ACTIVE)
-            is Passive -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_IDENTIFIABLE)
+            is Passive -> this._walkDepthFirst(self, selfFunc, propFunc, COMPOSITE_PARTS_PASSIVE)
         }
         selfFunc(self)
     }
@@ -59,6 +59,9 @@ class ApplicationCompositionWalker {
                         if (null != part && part is Passive) {
                             this.walkDepthFirst(part, selfFunc, propFunc)
                         }
+                    } else {
+                        //TODO: warning! maybe
+                       // throw ApplicationInstantiationException("Cannot walk private property $property")
                     }
                 }
 
@@ -81,7 +84,7 @@ class ApplicationCompositionWalker {
             is Service -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_SERVICE)
             is Component -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_COMPONENT)
             is Active -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_ACTIVE)
-            is Passive -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_IDENTIFIABLE)
+            is Passive -> this._walkAfParts(self, partFunc, COMPOSITE_PARTS_PASSIVE)
         }
     }
 

@@ -35,7 +35,7 @@ class test_HelloWorldApp(
         afId:String
 ) : Application {
 
-    val webserver = WebserverKtor("$afId.webserver")
+    val webserver = WebserverKtor(this, "webserver")
 
     override val af = afApplication(this, afId) {
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }

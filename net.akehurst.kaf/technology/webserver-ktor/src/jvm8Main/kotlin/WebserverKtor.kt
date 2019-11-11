@@ -17,16 +17,19 @@
 package net.akehurst.kaf.technology.webserver.ktor
 
 import io.ktor.application.call
+import io.ktor.application.featureOrNull
 import io.ktor.http.ContentType
 import io.ktor.response.respondText
+import io.ktor.routing.Routing
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.jetty.Jetty
+import io.ktor.server.netty.Netty
 import net.akehurst.kaf.common.api.AFComponent
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Owner
+import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.comms.api.MessageChannel
@@ -38,6 +41,9 @@ class WebserverKtor(
         afId: String
 ) : Component {
 
+    lateinit var port_server:Port
+    lateinit var port_comms:Port
+
     private val port: Int by configuredValue { 9090 }
 
     lateinit var messageChannel: MessageChannel<*>
@@ -45,22 +51,18 @@ class WebserverKtor(
     private lateinit var server: ApplicationEngine
 
     override val af: AFComponent = afComponent(this, afId) {
-        port("server") {
+        port_server = port("server") {
             provides(Webserver::class)
         }
-        port("comms") {
+        port_comms = port("comms") {
             contract(provides = MessageChannel::class, requires = MessageChannel::class)
 
         }
 
         initialise = {
             self.af.log.info { "port = $port" }
-            server = embeddedServer(Jetty, port = port) {
-                routing {
-                    get("/") {
-                        call.respondText("Hello World!", ContentType.Text.Plain)
-                    }
-                }
+            server = embeddedServer(Netty, port = port) {
+
             }
         }
         execute = {
@@ -71,5 +73,9 @@ class WebserverKtor(
         }
     }
 
-
+    fun addStaticRoute(path:String) {
+        this.server.application.featureOrNull(Routing)?.get {
+            call.respondText("Route: $path", ContentType.Text.Plain)
+        }
+    }
 }

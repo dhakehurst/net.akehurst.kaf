@@ -31,7 +31,8 @@ interface ApplicationFrameworkService : Service {
     fun externalConnections(self: Passive, kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
 
     fun doInjections(commandLineArgs: List<String>, root: AFHolder)
-    fun <T : Any> receiver(forInterface: KClass<*>, invokeMethod: (proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
+
+    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
     /**
      * request application shutdown
      * all currently queued tasks should be finished
@@ -75,6 +76,21 @@ interface Component : Active {
 }
 
 interface Port {
+
+    val required: Map<KClass<*>, MutableSet<Any>>
+
+    val provided: Map<KClass<*>, MutableSet<Any>>
+
+    /**
+     * return the object that realises the required interface
+     */
+    fun <T : Any> required(requiredInterface: KClass<T>): Set<T>
+
+    /**
+     * return the object that provides the given interface
+     */
+    fun <T : Any> provided(providedInterface: KClass<T>): Set<T>
+
     /**
      * connect the port to another at the same level, i.e. provides is matched to requires in each direction
      */
@@ -95,15 +111,8 @@ interface Port {
      */
     fun connectInternal(internal: Passive)
 
-    /**
-     * return the object that provides the given interface
-     */
-    fun <T : Any> provided(providedInterface: KClass<T>): T
-
-    /**
-     * return the object that realises the required interface
-     */
-    fun <T : Any> required(requiredInterface: KClass<T>): T
+    fun <T : Any> provideRequired(interfaceType: KClass<out T>, provider: T)
+    fun <T : Any> provideProvided(interfaceType: KClass<out T>, provider: T)
 }
 
 interface Application : Owner {
@@ -112,6 +121,7 @@ interface Application : Owner {
 
 interface AF : Identifiable {
     override val identity: String
+    val framework : ApplicationFrameworkService
 }
 
 interface AFOwner : AF {
@@ -127,11 +137,12 @@ interface AFPassive : AFOwner {
 
 interface AFActive : AFPassive, AFOwner {
     override val self: Active
+    suspend fun initialise()
     suspend fun start()
     suspend fun join()
     suspend fun shutdown()
     suspend fun terminate()
-    fun <T : Any> receiver(forInterface: KClass<*>): T
+    fun <T : Any> receiver(forInterface: KClass<T>): T
 }
 
 interface AFActor : AFActive {

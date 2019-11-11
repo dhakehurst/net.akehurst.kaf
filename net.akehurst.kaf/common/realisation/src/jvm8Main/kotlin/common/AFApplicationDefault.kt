@@ -34,9 +34,9 @@ actual class AFApplicationDefault(
         override val self: Application,
         override val identity: String,
         val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
-        val initialise: suspend (self:Application) -> Unit,
-        val execute: suspend (self:Application) -> Unit,
-        val finalise: suspend (self:Application) -> Unit
+        val initialiseBlock: suspend (self:Application) -> Unit,
+        val executeBlock: suspend (self:Application) -> Unit,
+        val finaliseBlock: suspend (self:Application) -> Unit
 ) : AFApplication {
 
     actual class Builder(val self: Application, val id: String) {
@@ -54,7 +54,7 @@ actual class AFApplicationDefault(
         }
     }
 
-    val framework by serviceReference<ApplicationFrameworkService>()
+    override val framework by serviceReference<ApplicationFrameworkService>()
     val log by logger("logging")
 
     private val _services = mutableMapOf<KClass<*>, Service>()
@@ -71,13 +71,23 @@ actual class AFApplicationDefault(
         fws.doInjections(commandLineArgs, this.self)
     }
 
+    private suspend fun initialise() {
+        val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.initialise()
+        }
+        log.trace { "initialise" }
+        this.initialiseBlock(self)
+    }
+
     private suspend fun start() {
         log.trace { "start" }
         val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
             it.af.start()
         }
-        this.execute(self)
+        log.trace { "execute" }
+        this.executeBlock(self)
         activeParts.forEach {
             it.af.join()
         }
@@ -86,7 +96,7 @@ actual class AFApplicationDefault(
     override fun startAsync(commandLineArgs: List<String>) {
         defineAndInject(commandLineArgs)
         runBlocking {
-            this.initialise(self)
+            this.initialise()
         }
         GlobalScope.launch {
             start()
@@ -96,7 +106,7 @@ actual class AFApplicationDefault(
     override fun startBlocking(commandLineArgs: List<String>) {
         defineAndInject(commandLineArgs)
         runBlocking {
-            this.initialise(self)
+            this.initialise()
         }
         runBlocking {
             start()
@@ -111,7 +121,8 @@ actual class AFApplicationDefault(
                 it.af.shutdown()
                // it.af.join()
             }
-            this.finalise(self)
+            log.trace { "finalise" }
+            this.finaliseBlock(self)
         }
         log.trace { "shutdown end" }
     }

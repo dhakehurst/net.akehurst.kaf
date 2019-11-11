@@ -19,6 +19,7 @@ package net.akehurst.kaf.common.realisation
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kotlinx.collections.MapNonNull
 import net.akehurst.kotlinx.collections.mutableMapNonNullOf
+import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
 inline fun afComponent(self: Component, id: String, init: AFComponentDefault.Builder.() -> Unit = {}): AFComponent {
@@ -32,15 +33,15 @@ open class AFComponentDefault(
         afIdentity: String,
         override val self: Component,
         override val port: MapNonNull<String, Port>,
-        initialise: suspend () -> Unit,
-        execute: suspend () -> Unit,
-        finalise: suspend () -> Unit
-) : AFActiveDefault(self, afIdentity, initialise, execute, finalise), AFComponent {
+        val initialiseBlock: suspend (self:Component) -> Unit,
+        val executeBlock: suspend (self:Component) -> Unit,
+        val finaliseBlock: suspend (self:Component) -> Unit
+) : AFPassiveDefault(self, afIdentity), AFComponent {
 
     class Builder(val self: Component, val id: String) {
-        var initialise: suspend () -> Unit = {}
-        var execute: suspend () -> Unit = {}
-        var finalise: suspend () -> Unit = {}
+        var initialise: suspend (self:Component) -> Unit = {}
+        var execute: suspend (self:Component) -> Unit = {}
+        var finalise: suspend (self:Component) -> Unit = {}
         val ports = mutableMapNonNullOf<String, Port>()
 
         fun port(portId: String, init: AFPortDefault.Builder.() -> Unit): Port {
@@ -63,13 +64,72 @@ open class AFComponentDefault(
     override fun <T : Any> portIn(providedInterface: KClass<T>): T {
         TODO()
     }
+
+    override suspend fun initialise() {
+        log.trace { "initialise activeParts" }
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.initialise()
+        }
+
+        log.trace { "initialise" }
+        this.initialiseBlock(this.self)
+    }
+
+    override suspend fun start() {
+        log.trace { "start" }
+
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.start()
+        }
+
+        log.trace { "execute" }
+        this.executeBlock(this.self)
+
+    }
+
+    override suspend fun join() {
+        log.trace { "join" }
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.join()
+        }
+    }
+
+    override suspend fun shutdown() {
+        log.trace { "shutdown" }
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.shutdown()
+        }
+        log.trace { "finalise" }
+        this.finaliseBlock(this.self)
+    }
+
+    override suspend fun terminate() {
+        log.trace { "terminate" }
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.terminate()
+        }
+    }
+
+    override fun <T : Any> receiver(forInterface:KClass<T>): T {
+        return super.framework.proxy(forInterface) { handler, proxy, callable, args ->
+            when {
+                forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
+                else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
+            }
+        }
+    }
 }
 
 class AFPortDefault(
         val component: Component,
         val portId: String,
-        val required: Map<KClass<*>, MutableSet<Any>>,
-        val provided: Map<KClass<*>, MutableSet<Any>>
+        override val required: Map<KClass<*>, MutableSet<Any>>,
+        override val provided: Map<KClass<*>, MutableSet<Any>>
 ) : Port {
     class Builder(
             val component: Component,
@@ -97,66 +157,150 @@ class AFPortDefault(
         }
     }
 
-    private fun <T : Any> provideProvided(interfaceType: KClass<T>, provider: T) {
-        var set: MutableSet<Any> = this.provided[interfaceType]!!
+    private fun <T : Any> outProxy(forInterface: KClass<T>): T {
+        return this.component.af.framework.proxy(forInterface) { handler, proxy, callable, args ->
+            //TODO: really want directMembers of forInterface only
+            when {
+                Any::equals == callable -> handler.reflect().call(callable.name, *args)
+                Any::hashCode == callable -> handler.reflect().call(callable.name, *args)
+                Any::toString == callable -> "outProxy for $this"
+                else -> {
+                    component.af.log.trace { "calling ${callable.name}" }
+                    var result: Any? = null
+                    this.required(forInterface).forEach {
+                        if (it is Active) {
+                            val rec = it.af.receiver(forInterface)
+                            result = rec.reflect().call(callable.name, *args)
+                        } else {
+                            result = it.reflect().call(callable.name, *args)
+                        }
+                    }
+                    result
+                }
+            }
+        }
+    }
+
+    private fun <T : Any> inProxy(forInterface: KClass<T>): T {
+        return this.component.af.framework.proxy(forInterface) { handler, proxy, callable, args ->
+            //TODO: really want directMembers of forInterface only
+            when {
+                Any::equals == callable -> handler.reflect().call(callable.name, *args)
+                Any::hashCode == callable -> handler.reflect().call(callable.name, *args)
+                Any::toString == callable -> "inProxy for $this"
+                else -> {
+                    component.af.log.trace { "calling ${callable.name}" }
+                    var result: Any? = null
+                    this.provided(forInterface).forEach {
+                        if (it is Active) {
+                            val rec = it.af.receiver(forInterface)
+                            result = rec.reflect().call(callable.name, *args)
+                        } else {
+                            result = it.reflect().call(callable.name, *args)
+                        }
+                    }
+                    result
+                }
+            }
+        }
+    }
+
+    override fun <T : Any> provideProvided(interfaceType: KClass<out T>, provider: T) {
+        var set = this.provided[interfaceType]!!
         set.add(provider)
     }
 
-    override fun <T : Any> provided(providedInterface: KClass<T>): T {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun <T : Any> provideRequired(interfaceType: KClass<out T>, provider: T) {
+        var set = this.required[interfaceType]!!
+        set.add(provider)
     }
 
-    override fun <T : Any> required(requiredInterface: KClass<T>): T {
-        TODO()
+    override fun <T : Any> provided(providedInterface: KClass<T>): Set<T> {
+        return this.provided[providedInterface] as Set<T>? ?: emptySet()
+    }
+
+    override fun <T : Any> required(requiredInterface: KClass<T>): Set<T> {
+        return this.required[requiredInterface] as Set<T>? ?: emptySet()
     }
 
     override fun connectInternal(internal: Passive) {
         for (req in this.required.keys) {
             for (extConn in internal.af.externalConnections(req)) {
                 try {
-                    //val kclass = extConn.key.returnType.classifier as KClass<*>
                     val delegate = extConn.value as ExternalConnection<Any>
-                    delegate.setValue(internal)
-                    component.af.log.trace { "Internally connected ${component.af.identity}[$portId]required(${req}) to ${internal.af.identity}.${extConn.key.name}:${extConn.value.class_}" }
+                    val outProxy = this.outProxy(req)
+                    delegate.setValue(outProxy)
+                    component.af.log.trace { "${this}-{${req.simpleName}}-( internally required by ${internal.af.identity}.${extConn.key.name}:${extConn.value.class_.simpleName}" }
                 } catch (ex: Exception) {
-                    component.af.log.error { "Trying to connectInternal ${component.af.identity}[$portId]required(${req}) to ${internal.af.identity}.${extConn.key.name}" }
+                    component.af.log.error { "Trying to connectInternal ${this}-{${req.simpleName}}-( to ${internal.af.identity}.${extConn.key.name}:${extConn.value.class_.simpleName}" }
                 }
             }
         }
 
         for (prov in this.provided.keys) {
             if (prov.isInstance(internal)) {
-                this.provideProvided(prov as KClass<Any>, internal)
-                component.af.log.trace { "Internally connected ${component.af.identity}[$portId]provided(${prov}) to ${internal.af.identity}:${internal::class}." }
+                this.provideProvided(prov, internal)
+                component.af.log.trace { "${this}-{${prov.simpleName}}-o internally provided by ${internal.af.identity}:${internal::class.simpleName}" }
             }
         }
     }
 
     override fun connectInternal(internal: Port) {
-        /*
-        for (intf in this.provided.keys) {
-            val providers = internal.provided(intf) as Set<Any>
+        for (prov in this.provided.keys) {
+            val providers = internal.provided(prov)
             for (provider in providers) {
-                val t = intf as KClass<Any>
-                this.provideProvided<Any>(t, provider)
-                this.logger.log(LogLevel.TRACE, "Internally connected %s[%s] to %s.", this.afId(), t.getName(), provider.toString())
+                this.provideProvided(prov, provider)
+                component.af.log.trace { "${this}-{${prov.simpleName}}-o internally provided by $provider" }
             }
         }
 
-        for (intf in internal.required) {
-            val t = intf as Class<Any>
-            val provider = this.out<*>(intf)
-            internalPort.provideRequired(t, provider)
-            this.logger.log(LogLevel.TRACE, "Internally connected %s[%s] to %s.", this.afId(), t.getName(), provider.toString())
+        for (req in internal.required.keys) {
+            val provider = this.outProxy(req)
+            internal.provideRequired(req, provider)
+            component.af.log.trace { "${this}-{${req.simpleName}}-( internally required by $provider" }
         }
-         */
+
     }
 
     override fun connect(other: Port) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        for (req in this.required.keys) {
+            val objs = other.provided(req)
+            for (o in objs) {
+                this.provideRequired(req, o)
+                component.af.log.trace { "${this}-${req.simpleName}-(o-${o}" }
+            }
+        }
+
+        for (req in other.required.keys) {
+            val objs = this.provided(req)
+            for (o in objs) {
+                other.provideRequired(req, o)
+                component.af.log.trace { "${this}-${req.simpleName}-o)-${o}" }
+            }
+        }
     }
 
     override fun connect(other: Passive) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        for (req in this.provided.keys) {
+            for (extConn in other.af.externalConnections(req)) {
+                try {
+                    val delegate = extConn.value as ExternalConnection<Any>
+                    val inProxy = this.inProxy(req)
+                    delegate.setValue(inProxy)
+                    component.af.log.trace { "Connected ${other}.${extConn.key.name} to $this" }
+                } catch (ex: Exception) {
+                    component.af.log.error { "Trying to connect ${other}.${extConn.key.name} to $this" }
+                }
+            }
+        }
+
+        for (prov in this.required.keys) {
+            if (prov.isInstance(other)) {
+                this.provideRequired(prov, other)
+                component.af.log.trace { "Connected ${this}provided($prov) to $other." }
+            }
+        }
     }
+
+    override fun toString(): String = "${component.af.identity}[$portId]"
 }

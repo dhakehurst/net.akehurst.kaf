@@ -33,24 +33,32 @@ inline fun afActive(self: Active, id: String, init: AFActiveDefault.Builder.() -
 open class AFActiveDefault(
         override val self: Active,
         afIdentity: String,
-        val initialise: suspend () -> Unit,
-        val execute: suspend () -> Unit,
-        val finalise: suspend () -> Unit
+        val initialiseBlock: suspend (self:Active) -> Unit,
+        val executeBlock: suspend (self:Active) -> Unit,
+        val finaliseBlock: suspend (self:Active) -> Unit
 ) : AFPassiveDefault(self, afIdentity), AFActive {
 
     class Builder(val self: Active, val id: String) {
-        var initialise: suspend () -> Unit = {}
-        var execute: suspend () -> Unit = {}
-        var finalise: suspend () -> Unit = {}
+        var initialise: suspend (self:Active) -> Unit = {}
+        var execute: suspend (self:Active) -> Unit = {}
+        var finalise: suspend (self:Active) -> Unit = {}
         fun build(): AFActive {
             return AFActiveDefault(self, id, initialise, execute, finalise)
         }
     }
 
+    override suspend fun initialise() {
+        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
+        activeParts.forEach {
+            it.af.initialise()
+        }
+
+        log.trace { "initialise" }
+        this.initialiseBlock(this.self)
+    }
+
     override suspend fun start() {
         log.trace { "start" }
-        log.trace { "initialise" }
-        this.initialise()
 
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
@@ -58,11 +66,8 @@ open class AFActiveDefault(
         }
 
         log.trace { "execute" }
-        this.execute()
+        this.executeBlock(this.self)
 
-        activeParts.forEach {
-            it.af.join()
-        }
     }
 
     override suspend fun join() {
@@ -78,9 +83,9 @@ open class AFActiveDefault(
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
         activeParts.forEach {
             it.af.shutdown()
-       //     it.af.join()
         }
-        this.finalise()
+        log.trace { "finalise" }
+        this.finaliseBlock(this.self)
     }
 
     override suspend fun terminate() {
@@ -91,8 +96,8 @@ open class AFActiveDefault(
         }
     }
 
-    override fun <T : Any> receiver(forInterface:KClass<*>): T {
-        return super.framework.receiver(forInterface) { proxy, callable, args ->
+    override fun <T : Any> receiver(forInterface:KClass<T>): T {
+        return super.framework.proxy(forInterface) { handler, proxy, callable, args ->
             when {
                 forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
                 else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")

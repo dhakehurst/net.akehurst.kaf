@@ -20,6 +20,7 @@ import com.soywiz.klock.DateTime
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Identifiable
 import net.akehurst.kaf.common.api.Owner
+import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
@@ -63,6 +64,8 @@ class PersistentStoreNeo4j(
         override val owner: Owner,
         afId: String
 ) : PersistentStore, Component {
+
+    lateinit var port_persist:Port
 
     private val _registry = DatatypeRegistry()
 
@@ -290,7 +293,7 @@ class PersistentStoreNeo4j(
 
     // --- KAF ---
     override val af = afComponent(this, afId) {
-        port("persist") {
+        port_persist = port("persist") {
             provides(PersistentStore::class)
         }
         initialise = {
