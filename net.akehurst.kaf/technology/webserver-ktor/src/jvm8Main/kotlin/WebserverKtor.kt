@@ -18,14 +18,22 @@ package net.akehurst.kaf.technology.webserver.ktor
 
 import io.ktor.application.call
 import io.ktor.application.featureOrNull
+import io.ktor.application.install
+import io.ktor.features.CallLogging
+import io.ktor.features.DefaultHeaders
 import io.ktor.http.ContentType
+import io.ktor.http.content.default
+import io.ktor.http.content.resources
+import io.ktor.http.content.static
 import io.ktor.response.respondText
 import io.ktor.routing.Routing
 import io.ktor.routing.get
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.websocket.WebSockets
 import net.akehurst.kaf.common.api.AFComponent
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Owner
@@ -62,7 +70,10 @@ class WebserverKtor(
         initialise = {
             self.af.log.info { "port = $port" }
             server = embeddedServer(Netty, port = port) {
-
+                install(DefaultHeaders)
+                install(CallLogging)
+                install(Routing)
+                install(WebSockets)
             }
         }
         execute = {
@@ -73,9 +84,16 @@ class WebserverKtor(
         }
     }
 
-    fun addStaticRoute(path:String) {
-        this.server.application.featureOrNull(Routing)?.get {
-            call.respondText("Route: $path", ContentType.Text.Plain)
+    fun addTextRoute(path:String, text:String) {
+        this.server.application.featureOrNull(Routing)?.get(path) {
+            call.respondText(text, ContentType.Text.Plain)
+        }
+    }
+
+    fun addStaticResourcesRoute(routePath:String, resourcePath:String, defaultFile:String="index.html") {
+        this.server.application.featureOrNull(Routing)?.static(routePath) {
+            resources(resourcePath)
+            default(defaultFile)
         }
     }
 }

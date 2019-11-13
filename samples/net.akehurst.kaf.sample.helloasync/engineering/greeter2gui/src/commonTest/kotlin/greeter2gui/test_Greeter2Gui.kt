@@ -13,26 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pluginManagement {
-    repositories {
-        mavenLocal()
-        gradlePluginPortal()
+
+package net.akehurst.kaf.simple.hellouser.engineering.greeter2gui
+
+
+import kotlin.test.Test
+import com.soywiz.korio.async.suspendTest
+import kotlinx.coroutines.delay
+
+class test_Greeter2Gui {
+
+
+    //@Test
+    fun t() = suspendTest {
+
+        val sut = Greeter2Gui()
+
+        sut.start()
+
+        delay(5000)
+
+        sut.started()
+
+
+        delay(50000)
     }
+
 }
-
-
-rootProject.name = file(".").name
-
-fileTree(".") {
-    include ("**/build.gradle")
-    include ("**/build.gradle.kts")
-    exclude ("build.gradle") // Exclude the root _build file.
-    exclude ("build.gradle.kts") // Exclude the root _build file.
-}.forEach {
-    val prj = "kaf-"+it.parentFile.parentFile.name+"-"+it.parentFile.name
-    println( "including $prj at "+relativePath(it.parent))
-    include(prj)
-    project(":$prj").projectDir = File(relativePath(it.parent))
-}
-
-enableFeaturePreview("GRADLE_METADATA")
