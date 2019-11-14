@@ -1,14 +1,12 @@
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.AFApplication
-import net.akehurst.kaf.common.api.Application
-import net.akehurst.kaf.common.api.ApplicationFrameworkService
+import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.service.api.Service
 import net.akehurst.kaf.service.api.serviceReference
 import kotlin.reflect.KClass
 
-actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
-    val builder = AFApplicationDefault.Builder(self, id)
+actual inline fun afApplication(self: Application, identity: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
+    val builder = AFApplicationDefault.Builder(self, identity)
     builder.init()
     return builder.build()
 }
@@ -24,15 +22,15 @@ actual class AFApplicationDefault(
 
     actual class Builder(
             val self: Application,
-            val id: String
+            val identity: String
     ) {
-        actual var initialise: suspend (self:Application) -> Unit
+        actual var initialise: suspend (self: Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
-        actual var execute: suspend (self:Application) -> Unit
+        actual var execute: suspend (self: Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
-        actual var finalise: suspend (self:Application) -> Unit
+        actual var finalise: suspend (self: Application) -> Unit
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
             set(value) {}
 
@@ -43,6 +41,9 @@ actual class AFApplicationDefault(
             TODO("not implemented")
         }
     }
+
+    override var afHolder: AFHolder? = self
+    override var selfIdentity: String? = identity
 
     private val _services = mutableMapOf<KClass<*>, Service>()
     override val framework by serviceReference<ApplicationFrameworkService>()

@@ -37,22 +37,22 @@ class test_Application2 {
         fun writeln(text: String?)
     }
 
-    class Greeter(override val owner:Owner, afId: String) : Active {
+    class Greeter : Active {
 
         lateinit var output: Output
 
         val confGreeting: String by configuredValue("greeting") { "unknown" }
         val greeting: String? by commandLineValue() { confGreeting }
 
-        override val af = afActive(this, afId) {
+        override val af = afActive {
             execute = {
                 output.writeln(greeting)
             }
         }
     }
 
-    class Console(override val owner:Owner, afId: String) : Active, Output {
-        override val af = afActive(this, afId)
+    class Console() : Active, Output {
+        override val af = afActive()
 
         override fun writeln(text: String?) {
             println(text)
@@ -61,8 +61,8 @@ class test_Application2 {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter(this, "greeter")
-        val console = Console(this, "console")
+        val greeter = Greeter()
+        val console = Console()
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {

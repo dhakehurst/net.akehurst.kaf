@@ -24,8 +24,6 @@ import org.neo4j.driver.v1.Record
 import org.neo4j.driver.v1.Value
 
 class Neo4JReader(
-        override val owner: Owner,
-        afId: String,
         val neo4j: Driver
 ) : Passive {
 
@@ -64,6 +62,6 @@ class Neo4JReader(
     }
 
     // --- KAF ---
-    override val af = afPassive(this,afId) {}
+    override val af = afPassive()
 
 }

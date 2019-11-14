@@ -22,7 +22,7 @@ import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.service.api.Service
 import kotlin.reflect.KClass
 
-expect inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit = {}): AFApplication
+expect inline fun afApplication(self:Application,identity: String,init: AFApplicationDefault.Builder.() -> Unit = {}): AFApplication
 
 expect class AFApplicationDefault : AFApplication {
     class Builder {

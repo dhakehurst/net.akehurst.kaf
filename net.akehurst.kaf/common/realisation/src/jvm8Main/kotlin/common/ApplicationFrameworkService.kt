@@ -42,7 +42,7 @@ actual fun <T> runBlocking(block: suspend () -> T): T = kotlinx.coroutines.runBl
 
 actual class ApplicationFrameworkServiceDefault(
         val afId: String,
-        val application: Application,
+        val applicationAF: AFApplication,
         val applicationServices: Map<KClass<*>, Service>
 ) : ApplicationFrameworkService {
 
@@ -78,6 +78,7 @@ actual class ApplicationFrameworkServiceDefault(
     }
 
     actual override fun doInjections(commandLineArgs: List<String>, root: AFHolder) {
+        this.setupAF(root)
         this.injectServiceReferences(root)
         injectAfLoggers(root)
 
@@ -99,11 +100,39 @@ actual class ApplicationFrameworkServiceDefault(
     }
 
     actual override fun shutdown() {
-        application.af.shutdown()
+        applicationAF.shutdown()
     }
 
     actual override fun terminate() {
-        application.af.terminate()
+        applicationAF.terminate()
+    }
+
+    private fun setupAF(root: AFHolder) {
+        log().trace { "setupAF" }
+        val walker = ApplicationCompositionWalker()
+        walker.walkDepthFirst(root, { obj ->
+            obj.af.afHolder = obj
+        }) { obj, property ->
+            when {
+                property.returnType.isSubtypeOf(AFHolder::class.starProjectedType) -> {
+                    if (property is KProperty1<*, *>) {
+                        property.isAccessible = true
+                        val propValue = property.getter.call(obj)
+                        if (null != propValue) {
+                            if(propValue is AFHolder) {
+                                if (null == propValue.af.selfIdentity) {
+                                    propValue.af.selfIdentity = property.name
+                                }
+                            }
+                            if (propValue is Passive && obj.af is AFOwner) {
+                                propValue.af.owner = obj.af as AFOwner
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     private fun injectAfLoggers(root: AFHolder) {
@@ -132,11 +161,11 @@ actual class ApplicationFrameworkServiceDefault(
 
         }) { obj, property ->
             when {
-                property.returnType.isSubtypeOf(Passive::class.starProjectedType) -> {
+                property.returnType.isSubtypeOf(AFHolder::class.starProjectedType) -> {
                     if (property is KProperty1<*, *>) {
                         property.isAccessible = true
                         val propValue = property.getter.call(obj)
-                        if (null != propValue && propValue is Passive) {
+                        if (null != propValue && propValue is AFHolder) {
                             val logProperty = propValue.af::class.memberProperties.find { it.name == "log" }
                             logProperty!!.isAccessible = true
                             val logRef = (logProperty as KProperty1<Any, Any>).getDelegate(propValue.af) as ServiceReference<Service>

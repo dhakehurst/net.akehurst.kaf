@@ -36,30 +36,29 @@ class test_ApplicationWithActor {
         fun writeln(text: String?)
     }
 
-    class Greeter(override val owner:Owner, afId: String) : Actor {
+    class Greeter() : Actor {
         interface Shutdown {
             fun shutdown()
         }
 
-        val framework by serviceReference<ApplicationFrameworkService>()
         lateinit var output: Output
 
         val confGreeting: String by configuredValue("greeting") { "unknown" }
         val greeting: String? by commandLineValue() { confGreeting }
 
-        override val af = afActor(this, afId) {
-            preExecute = {
+        override val af = afActor() {
+            preExecute = {self->
                 output.writeln(greeting)
                 self.af.receive(Shutdown::shutdown, asyncCallContext()) {
-                    framework.shutdown()
+                    self.af.framework.shutdown()
                 }
             }
         }
 
     }
 
-    class Console(override val owner:Owner, afId: String) : Actor, Output {
-        override val af = afActor(this, afId)
+    class Console() : Actor, Output {
+        override val af = afActor()
 
         override fun writeln(text: String?) {
             println(text)
@@ -68,10 +67,10 @@ class test_ApplicationWithActor {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter(this,"greeter")
-        val console = Console(this,"console")
+        val greeter = Greeter()
+        val console = Console()
 
-        override val af = afApplication(this, afId) {
+        override val af = afApplication(this,afId) {
             defineService(ConfigurationService::class) {
                 ConfigurationMap(mutableMapOf(
                         "sut.greeter.greeting" to "Hello World!"

@@ -61,8 +61,6 @@ import kotlin.reflect.KClass
 // TODO: improve performance
 // [https://medium.com/neo4j/5-tips-tricks-for-fast-batched-updates-of-graph-structures-with-neo4j-and-cypher-73c7f693c8cc]
 class PersistentStoreNeo4j(
-        override val owner: Owner,
-        afId: String
 ) : PersistentStore, Component {
 
     lateinit var port_persist:Port
@@ -292,11 +290,11 @@ class PersistentStoreNeo4j(
     }
 
     // --- KAF ---
-    override val af = afComponent(this, afId) {
+    override val af = afComponent {
         port_persist = port("persist") {
             provides(PersistentStore::class)
         }
-        initialise = {
+        initialise = {self->
             self.af.port["persist"].connectInternal(self)
         }
         execute = {
@@ -343,7 +341,7 @@ class PersistentStoreNeo4j(
             }
         }
         af.log.debug { "success: connected to Neo4j: ${uri} as user ${user}" }
-        this.neo4JReader = Neo4JReader(this.af.self, "neo4JReader", this._neo4j)
+        this.neo4JReader = Neo4JReader( this._neo4j)
         af.doInjections(this.neo4JReader)
 
         //default DateTime mapping

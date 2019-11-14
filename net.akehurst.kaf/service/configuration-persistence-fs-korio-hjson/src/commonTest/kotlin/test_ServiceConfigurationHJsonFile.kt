@@ -20,13 +20,11 @@ import kotlin.test.assertEquals
 
 class test_ServiceConfigurationHJsonFile : Application {
 
-    class Obj(
-            override val owner: Owner
-    ) : Passive {
+    class Obj() : Passive {
         val confValue : String by configuredValue { "default" }
-        override val af = afPassive(this, "obj")
+        override val af = afPassive()
     }
-    val obj = Obj(this)
+    val obj = Obj()
 
     var confDoc = hjson("confDoc") {
         objectJson {  }
@@ -50,7 +48,7 @@ class test_ServiceConfigurationHJsonFile : Application {
     @ExperimentalStdlibApi
     override val af = afApplication(this,"test") {
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }
-        val cs = ServiceConfigurationHJsonFile(this@test_ServiceConfigurationHJsonFile, "application.hjson", true)
+        val cs = ServiceConfigurationHJsonFile("application.hjson", true)
         cs.fs= fs
         defineService(ConfigurationService::class) { cs }
 

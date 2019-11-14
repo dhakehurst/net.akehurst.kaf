@@ -23,24 +23,31 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 
-inline fun afPassive(self: Passive, id: String, init: AFPassiveDefault.Builder.() -> Unit = {}): AFPassive {
-    val builder = AFPassiveDefault.Builder(self, id)
+inline fun afPassive(selfIdentity: String? = null, init: AFPassiveDefault.Builder.() -> Unit = {}): AFPassive {
+    val builder = AFPassiveDefault.Builder(selfIdentity)
     builder.init()
     return builder.build()
 }
 
 open class AFPassiveDefault(
-        override val self: Passive,
-        val selfIdentity: String
+        override var selfIdentity: String? = null
 ) : AFPassive {
 
-    class Builder(val self: Passive, val selfIdentity: String) {
+    class Builder(val selfIdentity: String?) {
         fun build(): AFPassive {
-            return AFPassiveDefault(self, selfIdentity)
+            return AFPassiveDefault(selfIdentity)
         }
     }
 
-    override val owner: AFOwner get() = self.owner.af
+    override var afHolder: AFHolder? = null
+    override val self: Passive
+        get() {
+            return when (afHolder) {
+                is Passive -> afHolder as Passive? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
+                else -> throw ApplicationInstantiationException("afHolder must be of type Passive for $identity")
+            }
+        }
+    override var owner: AFOwner? = null
     val ownerIdentity: String
         get() {
             val o = owner

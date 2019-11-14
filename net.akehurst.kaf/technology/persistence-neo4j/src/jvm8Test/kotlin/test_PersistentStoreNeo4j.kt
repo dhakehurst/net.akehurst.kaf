@@ -52,7 +52,7 @@ class test_PersystentStoreNeo4j : Application {
         }
     }
 
-    val sut = PersistentStoreNeo4j(this, "sut")
+    val sut = PersistentStoreNeo4j()
 
     @BeforeTest
     fun startup() {

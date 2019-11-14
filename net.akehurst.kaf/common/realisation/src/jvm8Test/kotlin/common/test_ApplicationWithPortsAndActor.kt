@@ -36,12 +36,12 @@ class test_ApplicationWithPortsAndActor {
         suspend fun writeln(text: String?)
     }
 
-    class component_Greeter(override val owner: Owner, afId: String) : Component {
+    class component_Greeter() : Component {
 
         lateinit var port_display: Port
-        val handler = actor_Greeter(this, "handler")
+        val handler = actor_Greeter()
 
-        override val af = afComponent(this, afId) {
+        override val af = afComponent {
             port_display = port("display") { requires(Output::class) }
             initialise = {
                 port_display.connectInternal(handler)
@@ -49,34 +49,33 @@ class test_ApplicationWithPortsAndActor {
         }
     }
 
-    class actor_Greeter(override val owner: Owner, afId: String) : Actor {
+    class actor_Greeter() : Actor {
         interface Shutdown {
             fun shutdown()
         }
 
-        val framework by serviceReference<ApplicationFrameworkService>()
         val output: Output by externalConnection()
 
         val confGreeting: String by configuredValue("greeting") { "unknown" }
         val greeting: String? by commandLineValue() { confGreeting }
 
-        override val af = afActor(this, afId) {
-            preExecute = {
+        override val af = afActor {
+            preExecute = { self ->
                 output.writeln(greeting)
                 self.af.receive(Shutdown::shutdown, asyncCallContext()) {
-                    framework.shutdown()
+                    self.af.framework.shutdown()
                 }
             }
         }
 
     }
 
-    class component_Console(override val owner: Owner, afId: String) : Component {
+    class component_Console() : Component {
 
         lateinit var port_output: Port
-        val handler = actor_Console(this, "handler")
+        val handler = actor_Console()
 
-        override val af = afComponent(this, afId) {
+        override val af = afComponent {
             port_output = port("output") { provides(Output::class) }
             initialise = {
                 port_output.connectInternal(handler)
@@ -84,8 +83,8 @@ class test_ApplicationWithPortsAndActor {
         }
     }
 
-    class actor_Console(override val owner: Owner, afId: String) : Actor, Output {
-        override val af = afActor(this, afId)
+    class actor_Console() : Actor, Output {
+        override val af = afActor()
 
         override suspend fun writeln(text: String?) {
             println(text)
@@ -94,10 +93,10 @@ class test_ApplicationWithPortsAndActor {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = component_Greeter(this, "greeter")
-        val console = component_Console(this, "console")
+        val greeter = component_Greeter()
+        val console = component_Console()
 
-        override val af = afApplication(this, afId) {
+        override val af = afApplication(this,afId) {
             defineService(ConfigurationService::class) {
                 ConfigurationMap(mutableMapOf(
                         "sut.greeter.handler.greeting" to "Hello World!"

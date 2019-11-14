@@ -31,8 +31,8 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 
-inline fun afActor(self: Actor, id: String, init: AFActorDefault.Builder.() -> Unit = {}): AFActor {
-    val builder = AFActorDefault.Builder(self, id)
+inline fun afActor(selfIdentity: String?=null, init: AFActorDefault.Builder.() -> Unit = {}): AFActor {
+    val builder = AFActorDefault.Builder(selfIdentity)
     builder.init()
     return builder.build()
 }
@@ -64,22 +64,29 @@ data class SignalKey(val signal: KCallable<*>, val context: AsyncCallContext) {
 }
 
 open class AFActorDefault(
-        override val self: Actor,
-        afIdentity: String,
+        selfIdentity: String? = null,
         val initialiseBlock: suspend (self:Actor) -> Unit,
         val preExecuteBlock: suspend (self:Actor) -> Unit,
         val finaliseBlock: suspend (self:Actor) -> Unit
-) : AFPassiveDefault(self, afIdentity), AFActor {
+) : AFPassiveDefault( selfIdentity), AFActor {
 
-    class Builder(val self: Actor, val id: String) {
+    class Builder(val selfIdentity: String?) {
         var initialise: suspend (self:Actor) -> Unit = {}
         var preExecute: suspend (self:Actor) -> Unit = {}
         var finalise: suspend (self:Actor) -> Unit = {}
 
         fun build(): AFActor {
-            return AFActorDefault(self, id, initialise, preExecute, finalise)
+            return AFActorDefault( selfIdentity, initialise, preExecute, finalise)
         }
     }
+
+    override val self: Actor
+        get() {
+            return when(afHolder) {
+                is Actor -> afHolder as Actor? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
+                else -> throw ApplicationInstantiationException("afHolder must be of type Actor for $identity")
+            }
+        }
 
     private val inbox = Channel<Signal>(Channel.UNLIMITED)
     private val whenReceived = mutableMapOf<SignalKey, MutableSet<Any>>() //key -> (...)->Unit

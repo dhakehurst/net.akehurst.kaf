@@ -27,8 +27,7 @@ import kotlin.reflect.KClass
 // TODO: improve performance
 // [https://medium.com/neo4j/5-tips-tricks-for-fast-batched-updates-of-graph-structures-with-neo4j-and-cypher-73c7f693c8cc]
 class PersistentStoreLocalFS(
-        override val owner: Owner,
-        afId: String
+
 ) : PersistentStore, Component {
 
     private val _registry = DatatypeRegistry()
@@ -40,11 +39,11 @@ class PersistentStoreLocalFS(
 
 
     // --- KAF ---
-    override val af = afComponent(this, afId) {
+    override val af = afComponent {
         port("persist") {
             provides(PersistentStore::class)
         }
-        initialise = {
+        initialise = { self ->
             self.af.port["persist"].connectInternal(self)
         }
     }

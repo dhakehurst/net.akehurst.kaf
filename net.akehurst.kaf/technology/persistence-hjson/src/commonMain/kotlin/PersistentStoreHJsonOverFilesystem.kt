@@ -30,8 +30,6 @@ import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 import kotlin.reflect.KClass
 
 class PersistentStoreHJsonOverFilesystem(
-        override val owner: Owner,
-        afId: String
 ) : PersistentStore, Component {
 
     class FoundReferenceException : RuntimeException {
@@ -46,7 +44,7 @@ class PersistentStoreHJsonOverFilesystem(
 
     @ExperimentalStdlibApi
     private fun buildHJson(rootItem: Identifiable): ByteArray {
-        val doc = this.serialiser.toHJson(rootItem,rootItem)
+        val doc = this.serialiser.toHJson(rootItem, rootItem)
         val bytes = doc.toHJsonString().encodeToByteArray()
         return bytes
     }
@@ -56,18 +54,18 @@ class PersistentStoreHJsonOverFilesystem(
     }
 
     // --- KAF ---
-    override val af = afComponent(this, afId) {
+    override val af = afComponent {
         port("persist") {
             provides(PersistentStore::class)
         }
-        initialise = {
+        initialise = { self ->
             self.af.port["persist"].connectInternal(self)
         }
     }
 
     // --- PersistentStore ---
     override fun configure(settings: Map<String, Any>) {
-        val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*,*>>()
+        val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
         defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
                 { primitive ->
                     val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
@@ -78,12 +76,12 @@ class PersistentStoreHJsonOverFilesystem(
                 })
         val komposite = settings["komposite"] as String
         if (settings.containsKey("primitiveMappers")) {
-            defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<Any>, PrimitiveMapper<Any,HJsonValue>>)
+            defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>)
         }
         af.log.debug { "trying: to register komposite information: $komposite" }
         this.serialiser.registerKotlinStdPrimitives()
         this.serialiser.confgureDatatypeModel(komposite)
-        (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any,HJsonValue>>).forEach { (k,v) ->
+        (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>).forEach { (k, v) ->
             this.serialiser.registerPrimitiveAsObject(k as KClass<Any>, v.toRaw, v.toPrimitive)
         }
     }

@@ -76,7 +76,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         initialise = {}
     }
 
-    val sut = PersistentStoreNeo4j("sut")
+    val sut = PersistentStoreNeo4j()
 
     @BeforeTest
     fun startup() {

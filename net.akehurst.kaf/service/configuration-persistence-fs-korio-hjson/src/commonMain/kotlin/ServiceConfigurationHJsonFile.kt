@@ -30,7 +30,6 @@ import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 
 
 class ServiceConfigurationHJsonFile(
-        override val owner: Owner,
         val filePath: String,
         /**
          * if true then load the hjson doc fresh each time a value is accessed.
@@ -40,9 +39,9 @@ class ServiceConfigurationHJsonFile(
         val dynamic: Boolean = false
 ) : ConfigurationService, Passive {
 
-    override val af = afPassive(this, "ServiceConfigurationHJsonFile")
+    override val af = afPassive()
 
-    var fs: PersistenceFilesystem = PersistenceFSKorioUniFS(this, "fs")
+    var fs: PersistenceFilesystem = PersistenceFSKorioUniFS()
 
     private val serialiser = KSerialiserHJson()
 

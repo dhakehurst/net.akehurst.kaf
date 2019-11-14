@@ -24,8 +24,7 @@ kotlin {
 kt2ts {
     localJvmName.set("jvm8")
     modulesConfigurationName.set("jvm8RuntimeClasspath")
-    packageJsonDir.set(file("${tsdDir}"))
-    declarationsFile.set(file("${tsdDir}/${project.group}-${project.name}.d.ts"))
+    outputDirectory.set(file("${tsdDir}"))
     classPatterns.set(listOf(
             "net.akehurst.kaf.common.api.Identifiable"
     ))

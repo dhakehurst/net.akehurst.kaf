@@ -26,18 +26,16 @@ import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
 import net.akehurst.kotlin.komposite.common.DatatypeRegistry
 
 class PersistenceFSKorioUniFS(
-        override val owner: Owner,
-        afId: String
 ) : Component, PersistenceFilesystem {
 
     lateinit var port_fs: Port
 
     // --- KAF ---
-    override val af = afComponent(this, afId) {
+    override val af = afComponent {
         port_fs = port("fs") {
             provides(PersistenceFilesystem::class)
         }
-        initialise = {
+        initialise = {self ->
             port_fs.connectInternal(self)
         }
     }

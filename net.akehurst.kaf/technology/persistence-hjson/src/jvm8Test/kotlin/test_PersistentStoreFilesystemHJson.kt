@@ -62,7 +62,7 @@ class test_PersistentStoreFilesystemHJson : Application {
         }
     }
 
-    val sut = PersistentStoreHJsonOverFilesystem(this, "sut")
+    val sut = PersistentStoreHJsonOverFilesystem()
     val fs = object : PersistenceFilesystem {
         val map = mutableMapOf<String,ByteArray>()
         override fun write(uri: String, bytes: ByteArray) {

@@ -33,11 +33,11 @@ import kotlin.test.Test
 
 class test_Application {
 
-    class ActivePart(override val owner:Owner) : Active {
+    class ActivePart() : Active {
         val greeting: String? by commandLineValue() { "greeting" }
 
-        override val af = afActive(this, "comp") {
-            execute = {
+        override val af = afActive {
+            execute = { self ->
                 self.af.log.info { greeting }
             }
         }
@@ -45,7 +45,7 @@ class test_Application {
 
     class TestApplication(id: String) : Application {
 
-        val comp: Active = ActivePart(this)
+        val comp: Active = ActivePart()
 
         override val af = afApplication(this, id) {
             defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }

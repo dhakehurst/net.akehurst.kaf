@@ -24,35 +24,38 @@ import net.akehurst.kaf.service.api.serviceReference
 import net.akehurst.kaf.service.logging.api.logger
 import kotlin.reflect.KClass
 
-actual inline fun afApplication(self: Application, id: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
-    val builder = AFApplicationDefault.Builder(self, id)
+actual inline fun afApplication(self:Application, identity: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {
+    val builder = AFApplicationDefault.Builder(self, identity)
     builder.init()
     return builder.build()
 }
 
 actual class AFApplicationDefault(
-        override val self: Application,
+        override val self:Application,
         override val identity: String,
         val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
-        val initialiseBlock: suspend (self:Application) -> Unit,
-        val executeBlock: suspend (self:Application) -> Unit,
-        val finaliseBlock: suspend (self:Application) -> Unit
+        val initialiseBlock: suspend (self: Application) -> Unit,
+        val executeBlock: suspend (self: Application) -> Unit,
+        val finaliseBlock: suspend (self: Application) -> Unit
 ) : AFApplication {
 
-    actual class Builder(val self: Application, val id: String) {
+    actual class Builder(val self:Application,val identity: String) {
         val _defineServices = mutableMapOf<KClass<*>, (commandLineArgs: List<String>) -> Service>()
 
-        actual var initialise: suspend (self:Application) -> Unit = {}
-        actual var execute: suspend (self:Application) -> Unit = {}
-        actual var finalise: suspend (self:Application) -> Unit = {}
+        actual var initialise: suspend (self: Application) -> Unit = {}
+        actual var execute: suspend (self: Application) -> Unit = {}
+        actual var finalise: suspend (self: Application) -> Unit = {}
         actual inline fun <reified T : Service> defineService(serviceClass: KClass<T>, noinline func: (commandLineArgs: List<String>) -> T) {
             _defineServices[serviceClass] = func
         }
 
         actual fun build(): AFApplication {
-            return AFApplicationDefault(self, id, _defineServices, initialise, execute, finalise)
+            return AFApplicationDefault(self, identity, _defineServices, initialise, execute, finalise)
         }
     }
+
+    override var afHolder: AFHolder? = self
+    override var selfIdentity: String? = identity
 
     override val framework by serviceReference<ApplicationFrameworkService>()
     val log by logger("logging")
@@ -66,7 +69,7 @@ actual class AFApplicationDefault(
         this.defineServices.forEach { me ->
             this._services[me.key] = me.value(commandLineArgs)
         }
-        val fws = ApplicationFrameworkServiceDefault("${this.identity}.framework", self, this._services)
+        val fws = ApplicationFrameworkServiceDefault("${this.identity}.framework", this, this._services)
         this._services[ApplicationFrameworkService::class] = fws
         fws.doInjections(commandLineArgs, this.self)
     }
@@ -119,7 +122,7 @@ actual class AFApplicationDefault(
             val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()
             activeParts.forEach {
                 it.af.shutdown()
-               // it.af.join()
+                // it.af.join()
             }
             log.trace { "finalise" }
             this.finaliseBlock(self)

@@ -16,36 +16,39 @@
 
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.AFActive
-import net.akehurst.kaf.common.api.AFOwner
-import net.akehurst.kaf.common.api.Active
-import net.akehurst.kaf.common.api.ActiveException
+import net.akehurst.kaf.common.api.*
 import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
 
-inline fun afActive(self: Active, id: String, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
-    val builder = AFActiveDefault.Builder(self, id)
+inline fun afActive(selfIdentity: String?=null, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
+    val builder = AFActiveDefault.Builder( selfIdentity)
     builder.init()
     return builder.build()
 }
 
 open class AFActiveDefault(
-        override val self: Active,
-        afIdentity: String,
+        selfIdentity: String? = null,
         val initialiseBlock: suspend (self:Active) -> Unit,
         val executeBlock: suspend (self:Active) -> Unit,
         val finaliseBlock: suspend (self:Active) -> Unit
-) : AFPassiveDefault(self, afIdentity), AFActive {
+) : AFPassiveDefault( selfIdentity), AFActive {
 
-    class Builder(val self: Active, val id: String) {
+    class Builder(val selfIdentity: String?) {
         var initialise: suspend (self:Active) -> Unit = {}
         var execute: suspend (self:Active) -> Unit = {}
         var finalise: suspend (self:Active) -> Unit = {}
         fun build(): AFActive {
-            return AFActiveDefault(self, id, initialise, execute, finalise)
+            return AFActiveDefault(selfIdentity, initialise, execute, finalise)
         }
     }
+    override val self: Active
+        get() {
+            return when(afHolder) {
+                is Active -> afHolder as Active? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
+                else -> throw ApplicationInstantiationException("afHolder must be of type Active for $identity")
+            }
+        }
 
     override suspend fun initialise() {
         val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()

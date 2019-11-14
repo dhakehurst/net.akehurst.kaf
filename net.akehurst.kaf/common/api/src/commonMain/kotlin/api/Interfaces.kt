@@ -59,7 +59,6 @@ interface Owner : AFHolder {
 }
 
 interface Passive : Owner {
-    val owner: Owner
     override val af: AFPassive
 }
 
@@ -120,6 +119,8 @@ interface Application : Owner {
 }
 
 interface AF : Identifiable {
+    var selfIdentity : String?
+    var afHolder : AFHolder?
     override val identity: String
     val framework : ApplicationFrameworkService
 }
@@ -129,7 +130,7 @@ interface AFOwner : AF {
 
 interface AFPassive : AFOwner {
     val self: Passive
-    val owner: AFOwner?
+    var owner: AFOwner?
     val log: Logger
     fun externalConnections(kClass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
     fun doInjections(root: Passive)

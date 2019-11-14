@@ -42,24 +42,23 @@ class test_ApplicationFullAsync {
         suspend fun doneWriteln(text: String?)
     }
 
-    class Greeter(override val owner:Owner, afId: String) : Actor, OutputNotification {
+    class Greeter() : Actor, OutputNotification {
         interface Shutdown {
             fun shutdown()
         }
 
-        val framework by serviceReference<ApplicationFrameworkService>()
         lateinit var output: OutputRequest
 
         val confGreeting: String by configuredValue("greeting") { "unknown" }
         val greeting: String? by commandLineValue() { confGreeting }
 
         @ExperimentalTime
-        override val af = afActor( this, afId) {
-            preExecute = {
+        override val af = afActor() {
+            preExecute = { self ->
                 self.af.send {
                     output.writeln(greeting)
-                }.andWhen(OutputNotification::doneWriteln, 5.seconds) { txt:String? ->
-                    framework.shutdown()
+                }.andWhen(OutputNotification::doneWriteln, 5.seconds) { txt: String? ->
+                    self.af.framework.shutdown()
                 }.go()
             }
         }
@@ -69,12 +68,12 @@ class test_ApplicationFullAsync {
         }
     }
 
-    class Console(override val owner:Owner, afId: String) : Actor, OutputRequest {
+    class Console() : Actor, OutputRequest {
         lateinit var outputNotification: OutputNotification
 
-        override val af = afActor(this, afId)
+        override val af = afActor()
 
-        override suspend fun  writeln(text: String?) {
+        override suspend fun writeln(text: String?) {
             println(text)
             outputNotification.doneWriteln(text)
         }
@@ -82,11 +81,11 @@ class test_ApplicationFullAsync {
 
     class TestApplication(afId: String) : Application {
 
-        val greeter = Greeter(this, "greeter")
-        val console = Console(this, "console")
+        val greeter = Greeter()
+        val console = Console()
 
         @ExperimentalTime
-        override val af = afApplication(this, afId) {
+        override val af = afApplication(this,afId) {
             defineService(ConfigurationService::class) {
                 ConfigurationMap(mutableMapOf(
                         "sut.greeter.greeting" to "Hello World!"
