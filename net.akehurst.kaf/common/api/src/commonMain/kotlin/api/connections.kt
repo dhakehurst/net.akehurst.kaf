@@ -16,7 +16,6 @@
 
 package net.akehurst.kaf.common.api
 
-import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty

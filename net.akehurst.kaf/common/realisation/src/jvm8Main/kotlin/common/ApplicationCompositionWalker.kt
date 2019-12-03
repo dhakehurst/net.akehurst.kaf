@@ -17,6 +17,7 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.*
+import net.akehurst.kaf.common.api.annotations.CompositePart
 import net.akehurst.kaf.service.api.Service
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType

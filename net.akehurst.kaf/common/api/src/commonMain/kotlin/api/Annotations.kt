@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.akehurst.kaf.common.api
+package net.akehurst.kaf.common.api.annotations
 
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)

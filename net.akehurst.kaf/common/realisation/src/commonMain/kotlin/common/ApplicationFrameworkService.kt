@@ -17,11 +17,13 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.*
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-expect fun <T> runBlocking(block:suspend () -> T) : T
+expect fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, block:suspend () -> T) : T
 
 expect class ApplicationFrameworkServiceDefault : ApplicationFrameworkService {
     override fun partsOf(composite: Owner) : List<Passive>

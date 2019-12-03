@@ -1,7 +1,7 @@
 val version_komposite: String by project
 val version_kotlinx:String by project
 
-val version_korio = "1.8.4"
+val version_korio: String by project
 val version_agl: String by project
 val version_klock: String by project
 

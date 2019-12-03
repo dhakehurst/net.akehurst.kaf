@@ -28,6 +28,8 @@ import net.akehurst.kaf.service.logging.api.LoggingService
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -38,7 +40,7 @@ import kotlin.reflect.full.starProjectedType
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.kotlinFunction
 
-actual fun <T> runBlocking(block: suspend () -> T): T = kotlinx.coroutines.runBlocking { block() }
+actual fun <T> runBlocking(context: CoroutineContext, block: suspend () -> T): T = kotlinx.coroutines.runBlocking(context) { block() }
 
 actual class ApplicationFrameworkServiceDefault(
         val afId: String,
@@ -70,7 +72,9 @@ actual class ApplicationFrameworkServiceDefault(
         val handler = object: InvocationHandler {
             override fun invoke(proxy: Any?, method: Method?, args: Array<out Any>?): Any? {
                 val args2 = args ?: emptyArray<Any>()
-                return invokeMethod.invoke(this, proxy, method?.kotlinFunction!!, args2)
+                //this throws an error if one of the parameters is an inline class
+                val callable = method?.kotlinFunction!!
+                return invokeMethod.invoke(this, proxy, callable, args2)
             }
         }
         val proxy = Proxy.newProxyInstance(forInterface.java.classLoader, arrayOf(forInterface.java), handler)

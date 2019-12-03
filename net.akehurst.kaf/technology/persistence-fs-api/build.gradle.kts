@@ -1,4 +1,4 @@
-val version_kotlinx_io = "0.1.15"
+val version_kotlinx_io:String by project
 
 dependencies {
 

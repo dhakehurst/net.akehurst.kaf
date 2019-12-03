@@ -135,7 +135,7 @@ class WebserverKtor<T : Any>(
     private val connections = mutableMapOf<T, WebSocketServerSession>()
     private val receiveActions = mutableMapOf<ChannelIdentity, suspend (endPointId: T, message: String) -> Unit>()
 
-    suspend fun handleWebsocketConnection(ws: WebSocketServerSession) {
+    private suspend fun handleWebsocketConnection(ws: WebSocketServerSession) {
         val n = ws.call.sessions.findName(sessionType)
         val session = ws.call.sessions.get(n) as T?
         if (session == null) {
@@ -171,6 +171,10 @@ class WebserverKtor<T : Any>(
                 af.log.trace { "Websocket Connection closed from $session" }
             }
         }
+    }
+
+    override suspend fun <T : Any> receiveAll(interfaceToReceive: KClass<T>, target: T) {
+        TODO("not implemented")
     }
 
     override suspend fun receive(channelId: ChannelIdentity, action: suspend (endPointId: T, message: String) -> Unit) {

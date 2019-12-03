@@ -21,6 +21,7 @@ import kotlin.reflect.KClass
 class ApplicationInstantiationException(message: String) : RuntimeException(message)
 class ActiveException(message: String) : RuntimeException(message)
 class ActorException(message: String) : RuntimeException(message)
+class AyncException(message: String) : RuntimeException(message)
 
 class ServiceNotFoundException(serviceClass: KClass<*>) : RuntimeException("Service with identity ${serviceClass} is not found")
 

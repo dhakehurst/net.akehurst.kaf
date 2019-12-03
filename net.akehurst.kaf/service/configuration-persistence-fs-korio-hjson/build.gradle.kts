@@ -3,7 +3,7 @@ val version_coroutines:String by project
 
 val version_korio:String by project
 val version_agl: String by project
-val version_hjson: String = "1.0.0"
+val version_hjson: String by project
 val version_komposite: String by project
 val version_kserialisation: String by project
 val version_kotlinx: String by project
@@ -12,7 +12,7 @@ dependencies {
 
     commonMainImplementation(project(":kaf-service-configuration-api"))
     commonMainImplementation(project(":kaf-common-realisation"))
-    commonMainImplementation("net.akehurst.kotlin.hjson:hjson:1.0.0")
+    commonMainImplementation("net.akehurst.kotlin.hjson:hjson:$version_hjson")
     commonMainImplementation("net.akehurst.kotlin.kserialisation:kserialisation-hjson:$version_kserialisation")
     commonMainImplementation(project(":kaf-technology-persistence-fs-korio"))
 

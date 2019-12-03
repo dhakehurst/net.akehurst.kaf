@@ -22,7 +22,7 @@ import net.akehurst.kotlinx.collections.mutableMapNonNullOf
 import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
-inline fun afComponent( selfIdentity: String? = null, init: AFComponentDefault.Builder.() -> Unit = {}): AFComponent {
+inline fun afComponent(selfIdentity: String? = null, init: AFComponentDefault.Builder.() -> Unit = {}): AFComponent {
     val builder = AFComponentDefault.Builder(selfIdentity)
     builder.init()
     return builder.build()
@@ -179,7 +179,7 @@ class PortDefault(
                 else -> {
                     componentAF.log.trace { "calling ${callable.name}" }
                     var result: Any? = null
-                    this.required(forInterface).forEach {
+                    this.allRequired(forInterface).forEach {
                         if (it is Active) {
                             val rec = it.af.receiver(forInterface)
                             result = rec.reflect().call(callable.name, *args)
@@ -203,7 +203,7 @@ class PortDefault(
                 else -> {
                     componentAF.log.trace { "calling ${callable.name}" }
                     var result: Any? = null
-                    this.provided(forInterface).forEach {
+                    this.allProvided(forInterface).forEach {
                         if (it is Active) {
                             val rec = it.af.receiver(forInterface)
                             result = rec.reflect().call(callable.name, *args)
@@ -217,6 +217,14 @@ class PortDefault(
         }
     }
 
+    override fun <T : Any> provided(providedInterface: KClass<T>): T {
+        return inProxy(providedInterface)
+    }
+
+    override fun <T : Any> required(requiredInterface: KClass<T>): T {
+        return outProxy(requiredInterface)
+    }
+
     override fun <T : Any> provideProvided(interfaceType: KClass<out T>, provider: T) {
         var set = this.provided[interfaceType]!!
         set.add(provider)
@@ -227,11 +235,11 @@ class PortDefault(
         set.add(provider)
     }
 
-    override fun <T : Any> provided(providedInterface: KClass<T>): Set<T> {
+    override fun <T : Any> allProvided(providedInterface: KClass<T>): Set<T> {
         return this.provided[providedInterface] as Set<T>? ?: emptySet()
     }
 
-    override fun <T : Any> required(requiredInterface: KClass<T>): Set<T> {
+    override fun <T : Any> allRequired(requiredInterface: KClass<T>): Set<T> {
         return this.required[requiredInterface] as Set<T>? ?: emptySet()
     }
 
@@ -259,7 +267,7 @@ class PortDefault(
 
     override fun connectInternal(internal: Port) {
         for (prov in this.provided.keys) {
-            val providers = internal.provided(prov)
+            val providers = internal.allProvided(prov)
             for (provider in providers) {
                 this.provideProvided(prov, provider)
                 componentAF.log.trace { "${this}-{${prov.simpleName}}-o internally provided by $provider" }
@@ -276,7 +284,7 @@ class PortDefault(
 
     override fun connect(other: Port) {
         for (req in this.required.keys) {
-            val objs = other.provided(req)
+            val objs = other.allProvided(req)
             for (o in objs) {
                 this.provideRequired(req, o)
                 componentAF.log.trace { "${this}-${req.simpleName}-(o-${o}" }
@@ -284,7 +292,7 @@ class PortDefault(
         }
 
         for (req in other.required.keys) {
-            val objs = this.provided(req)
+            val objs = this.allProvided(req)
             for (o in objs) {
                 other.provideRequired(req, o)
                 componentAF.log.trace { "${this}-${req.simpleName}-o)-${o}" }

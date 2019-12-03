@@ -32,7 +32,7 @@ interface ApplicationFrameworkService : Service {
 
     fun doInjections(commandLineArgs: List<String>, root: AFHolder)
 
-    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
+    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
     /**
      * request application shutdown
      * all currently queued tasks should be finished
@@ -77,18 +77,29 @@ interface Component : Active {
 interface Port {
 
     val required: Map<KClass<*>, MutableSet<Any>>
-
     val provided: Map<KClass<*>, MutableSet<Any>>
 
     /**
-     * return the object that realises the required interface
+     * return an object that enables you to call methods on the port
+     * all connections to the port that provide the required interface will receive the message
      */
-    fun <T : Any> required(requiredInterface: KClass<T>): Set<T>
+    fun <T : Any> required(requiredInterface: KClass<T>): T
 
     /**
-     * return the object that provides the given interface
+     * return an object that enables you to call methods on the port
+     * all objects that provide the interface will receive the message
      */
-    fun <T : Any> provided(providedInterface: KClass<T>): Set<T>
+    fun <T : Any> provided(providedInterface: KClass<T>): T
+
+    /**
+     * return the objects that realise the required interface
+     */
+    fun <T : Any> allRequired(requiredInterface: KClass<T>): Set<T>
+
+    /**
+     * return the objects that provide the given interface
+     */
+    fun <T : Any> allProvided(providedInterface: KClass<T>): Set<T>
 
     /**
      * connect the port to another at the same level, i.e. provides is matched to requires in each direction
@@ -119,10 +130,10 @@ interface Application : Owner {
 }
 
 interface AF : Identifiable {
-    var selfIdentity : String?
-    var afHolder : AFHolder?
+    var selfIdentity: String?
+    var afHolder: AFHolder?
     override val identity: String
-    val framework : ApplicationFrameworkService
+    val framework: ApplicationFrameworkService
 }
 
 interface AFOwner : AF {

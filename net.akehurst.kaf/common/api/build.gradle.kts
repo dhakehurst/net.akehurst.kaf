@@ -1,5 +1,5 @@
 plugins {
-    id("net.akehurst.kotlin.kt2ts-plugin") version "1.0.0"
+    id("net.akehurst.kotlin.kt2ts") version "1.2.0"
 }
 
 val version_kotlinx:String by project
@@ -11,23 +11,10 @@ dependencies {
 
 }
 
-val tsdDir ="${buildDir}/tmp/jsJar/ts"
-
-kotlin {
-    sourceSets {
-        val jsMain by getting {
-            resources.srcDir("${tsdDir}")
-        }
-    }
-}
 
 kt2ts {
-    localJvmName.set("jvm8")
-    modulesConfigurationName.set("jvm8RuntimeClasspath")
-    outputDirectory.set(file("${tsdDir}"))
+    jvmTargetName.set("jvm8")
     classPatterns.set(listOf(
-            "net.akehurst.kaf.common.api.Identifiable"
+            "net.akehurst.kaf.common.api.*"
     ))
 }
-tasks.getByName("generateTypescriptDefinitionFile").dependsOn("jvm8MainClasses")
-tasks.getByName("jsJar").dependsOn("generateTypescriptDefinitionFile")

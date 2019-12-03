@@ -31,7 +31,7 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 
-inline fun afActor(selfIdentity: String?=null, init: AFActorDefault.Builder.() -> Unit = {}): AFActor {
+inline fun afActor(selfIdentity: String? = null, init: AFActorDefault.Builder.() -> Unit = {}): AFActor {
     val builder = AFActorDefault.Builder(selfIdentity)
     builder.init()
     return builder.build()
@@ -65,24 +65,24 @@ data class SignalKey(val signal: KCallable<*>, val context: AsyncCallContext) {
 
 open class AFActorDefault(
         selfIdentity: String? = null,
-        val initialiseBlock: suspend (self:Actor) -> Unit,
-        val preExecuteBlock: suspend (self:Actor) -> Unit,
-        val finaliseBlock: suspend (self:Actor) -> Unit
-) : AFPassiveDefault( selfIdentity), AFActor {
+        val initialiseBlock: suspend (self: Actor) -> Unit,
+        val preExecuteBlock: suspend (self: Actor) -> Unit,
+        val finaliseBlock: suspend (self: Actor) -> Unit
+) : AFPassiveDefault(selfIdentity), AFActor {
 
     class Builder(val selfIdentity: String?) {
-        var initialise: suspend (self:Actor) -> Unit = {}
-        var preExecute: suspend (self:Actor) -> Unit = {}
-        var finalise: suspend (self:Actor) -> Unit = {}
+        var initialise: suspend (self: Actor) -> Unit = {}
+        var preExecute: suspend (self: Actor) -> Unit = {}
+        var finalise: suspend (self: Actor) -> Unit = {}
 
         fun build(): AFActor {
-            return AFActorDefault( selfIdentity, initialise, preExecute, finalise)
+            return AFActorDefault(selfIdentity, initialise, preExecute, finalise)
         }
     }
 
     override val self: Actor
         get() {
-            return when(afHolder) {
+            return when (afHolder) {
                 is Actor -> afHolder as Actor? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
                 else -> throw ApplicationInstantiationException("afHolder must be of type Actor for $identity")
             }
@@ -98,7 +98,7 @@ open class AFActorDefault(
             val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
             if (null != wrFunc) {
                 log.trace { "using when received: ${key.signal.name}" }
-                (wrFunc as () -> Unit).invoke()
+                (wrFunc as suspend () -> Unit).invoke()
             } else {
                 defaultBody.invoke()
             }
@@ -111,7 +111,7 @@ open class AFActorDefault(
             val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
             if (null != wrFunc) {
                 log.trace { "using when received: ${key.signal.name}" }
-                (wrFunc as (P1) -> Unit).invoke(p1)
+                (wrFunc as suspend (P1) -> Unit).invoke(p1)
             } else {
                 defaultBody.invoke()
             }
@@ -124,7 +124,7 @@ open class AFActorDefault(
             val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
             if (null != wrFunc) {
                 log.trace { "using when received: ${key.signal.name}" }
-                (wrFunc as (P1, P2) -> Unit).invoke(p1, p2)
+                (wrFunc as suspend (P1, P2) -> Unit).invoke(p1, p2)
             } else {
                 defaultBody.invoke()
             }
@@ -136,13 +136,23 @@ open class AFActorDefault(
         this.receive(callable, context) {
             val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
             if (null != wrFunc) {
-                (wrFunc as (P1, P2, P3) -> Unit).invoke(p1, p2, p3)
+                (wrFunc as suspend (P1, P2, P3) -> Unit).invoke(p1, p2, p3)
             } else {
                 defaultBody.invoke()
             }
         }
     }
-
+    private fun <P1, P2, P3, P4> receive4(callable: KCallable<*>, context: AsyncCallContext, p1: P1, p2: P2, p3: P3, p4:P4, defaultBody: () -> Unit) {
+        val key = SignalKey(callable, context)
+        this.receive(callable, context) {
+            val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
+            if (null != wrFunc) {
+                (wrFunc as suspend (P1, P2, P3, P4) -> Unit).invoke(p1, p2, p3, p4)
+            } else {
+                defaultBody.invoke()
+            }
+        }
+    }
     override fun receive(callable: KCallable<*>, context: AsyncCallContext, action: suspend () -> Unit) {
         log.trace { "received: ${callable.name}" }
         inbox.offer(Signal(callable, action))
@@ -241,9 +251,10 @@ open class AFActorDefault(
             //TODO: ....maybe it does not matter if self implements the interface..so long as it has an 'andWhen' called?
             val lastArg = args.lastOrNull()
             if (lastArg is Continuation<*>) {
-                val asyncCallContext = lastArg.context[AsyncCallContextDefault] ?: TODO()
+                val asyncCallContext = lastArg.context[AsyncCallContextDefault] ?: throw AyncException("AsyncCallContext not found, call from an Actor or inside asyncSend")
+                val declaredArgsSize = args.size-1
                 when {
-                    forInterface.isInstance(self) -> when (args.size) {
+                    forInterface.isInstance(self) -> when (declaredArgsSize) {
                         //TODO: what asyncContext should we use here?
                         0 -> receive0(callable, asyncCallContext) {
                             self.reflect().call(callable.name, *args)
@@ -252,6 +263,12 @@ open class AFActorDefault(
                             self.reflect().call(callable.name, *args)
                         }
                         2 -> receive2(callable, asyncCallContext, args[0], args[1]) {
+                            self.reflect().call(callable.name, *args)
+                        }
+                        3 -> receive3(callable, asyncCallContext, args[0], args[1], args[2]) {
+                            self.reflect().call(callable.name, *args)
+                        }
+                        4 -> receive4(callable, asyncCallContext, args[0], args[1], args[2], args[3]) {
                             self.reflect().call(callable.name, *args)
                         }
                         else -> TODO()
@@ -271,6 +288,11 @@ open class AFActorDefault(
 }
 
 suspend fun asyncCallContext(): AsyncCallContext = coroutineContext[AsyncCallContextDefault]!!
+
+fun AFHolder.asyncSend(toSend: suspend () -> Unit) {
+    val asyncCallContext = AsyncCallContextDefault(this.af.identity)
+    runBlocking(asyncCallContext) { toSend.invoke() }
+}
 
 data class AsyncCallContextDefault(
         val contextId: String
