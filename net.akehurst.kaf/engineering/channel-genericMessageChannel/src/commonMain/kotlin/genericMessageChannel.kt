@@ -29,6 +29,7 @@ inline  fun <reified T : Any, U : Any> interface2MessageChannel(crossinline chan
     }
 }
 
+
 inline suspend fun <reified T : Any, U : Any> messageChannel2Interface(receiver:T, channel: MessageChannel<U>, crossinline deserialise: (String) -> List<Any>) {
     T::class.reflect().allMemberFunctions.forEach {
         //TODO: eliminate Any::.... functions
