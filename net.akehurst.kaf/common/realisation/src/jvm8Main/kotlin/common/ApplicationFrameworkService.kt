@@ -30,10 +30,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.reflect.KCallable
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
-import kotlin.reflect.KProperty1
+import kotlin.reflect.*
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.starProjectedType
@@ -68,13 +65,34 @@ actual class ApplicationFrameworkServiceDefault(
         return list
     }
 
-    actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T {
+    actual override fun makeAccessible(callable: KCallable<*>) {
+        callable.isAccessible = true
+    }
+
+    actual override fun callOn(obj:Any, callableName:String) : Any {
+        return obj::class.members.first { it.name==callableName }
+    }
+
+    actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, methodName:String, args: Array<out Any>) -> Any?): T {
         val handler = object: InvocationHandler {
             override fun invoke(proxy: Any?, method: Method?, args: Array<out Any>?): Any? {
                 val args2 = args ?: emptyArray<Any>()
                 //this throws an error if one of the parameters is an inline class
-                val callable = method?.kotlinFunction!!
-                return invokeMethod.invoke(this, proxy, callable, args2)
+                // see [https://youtrack.jetbrains.com/issue/KT-34024]
+//              val callable = method?.kotlinFunction!!
+
+                //FIXME using workaround by just checking for method name, might fail if duplicate names
+                val callable = method?.declaringClass?.kotlin?.members?.firstOrNull {
+                    //need to handle jvm name mangling!!
+
+                    if (it.name.contains('-') or method.name.contains('-') ) {
+                        it.name.substringBefore('-') == method.name.substringBefore('-')
+                    } else {
+                        it.name == method.name
+                    }
+
+                } ?: throw ApplicationFrameworkServiceException("method not found $method")
+                return invokeMethod.invoke(this, proxy, callable, method.name, args2)
             }
         }
         val proxy = Proxy.newProxyInstance(forInterface.java.classLoader, arrayOf(forInterface.java), handler)
@@ -119,19 +137,23 @@ actual class ApplicationFrameworkServiceDefault(
         }) { obj, property ->
             when {
                 property.returnType.isSubtypeOf(AFHolder::class.starProjectedType) -> {
-                    if (property is KProperty1<*, *>) {
-                        property.isAccessible = true
-                        val propValue = property.getter.call(obj)
-                        if (null != propValue) {
-                            if(propValue is AFHolder) {
-                                if (null == propValue.af.selfIdentity) {
-                                    propValue.af.selfIdentity = property.name
+                    try {
+                        if (property is KProperty1<*, *> && property.visibility != KVisibility.PRIVATE) {
+                            property.isAccessible = true
+                            val propValue = property.getter.call(obj)
+                            if (null != propValue) {
+                                if (propValue is AFHolder) {
+                                    if (null == propValue.af.selfIdentity) {
+                                        propValue.af.selfIdentity = property.name
+                                    }
+                                }
+                                if (propValue is Passive && obj.af is AFOwner) {
+                                    propValue.af.owner = obj.af as AFOwner
                                 }
                             }
-                            if (propValue is Passive && obj.af is AFOwner) {
-                                propValue.af.owner = obj.af as AFOwner
-                            }
                         }
+                    } catch (t:Throwable) {
+                        log().error(t) { "Trying to setupAF for $property" }
                     }
                 }
             }
@@ -166,7 +188,7 @@ actual class ApplicationFrameworkServiceDefault(
         }) { obj, property ->
             when {
                 property.returnType.isSubtypeOf(AFHolder::class.starProjectedType) -> {
-                    if (property is KProperty1<*, *>) {
+                    if (property is KProperty1<*, *> && property.visibility != KVisibility.PRIVATE) {
                         property.isAccessible = true
                         val propValue = property.getter.call(obj)
                         if (null != propValue && propValue is AFHolder) {

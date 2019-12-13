@@ -20,7 +20,9 @@ import net.akehurst.kaf.common.api.*
 import net.akehurst.kotlinx.collections.MapNonNull
 import net.akehurst.kotlinx.collections.mutableMapNonNullOf
 import net.akehurst.kotlinx.reflect.reflect
+import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 
 inline fun afComponent(selfIdentity: String? = null, init: AFComponentDefault.Builder.() -> Unit = {}): AFComponent {
     val builder = AFComponentDefault.Builder(selfIdentity)
@@ -30,13 +32,12 @@ inline fun afComponent(selfIdentity: String? = null, init: AFComponentDefault.Bu
 
 
 open class AFComponentDefault(
-
         selfIdentity: String? = null,
         override val port: MapNonNull<String, Port>,
         val initialiseBlock: suspend (self: Component) -> Unit,
         val executeBlock: suspend (self: Component) -> Unit,
         val finaliseBlock: suspend (self: Component) -> Unit
-) : AFPassiveDefault(selfIdentity), AFComponent {
+) : AFDefault(selfIdentity), AFComponent {
 
     class Builder(val selfIdentity: String?) {
         var initialise: suspend (self: Component) -> Unit = {}
@@ -61,13 +62,21 @@ open class AFComponentDefault(
         }
     }
 
-    override val self: Component
+    override val self: Component get() = super.self()
+
+    override var owner: AFOwner? = null
+    val ownerIdentity: String
         get() {
-            return when (afHolder) {
-                is Component -> afHolder as Component? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
-                else -> throw ApplicationInstantiationException("afHolder must be of type Component for $identity")
+            val o = owner
+            return if (null == o) {
+                ""
+            } else {
+                o.identity + "."
             }
         }
+
+    override val identity: String
+        get() = "${ownerIdentity}$selfIdentity"
 
     override fun <T : Any> portOut(requiredInterface: KClass<T>): T {
         TODO()
@@ -78,9 +87,9 @@ open class AFComponentDefault(
     }
 
     override suspend fun initialise() {
-        log.trace { "initialise activeParts" }
-        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
-        activeParts.forEach {
+        log.trace { "initialise parts" }
+        val parts = super.framework.partsOf(self).filterIsInstance<Passive>()
+        parts.forEach {
             it.af.initialise()
         }
 
@@ -128,9 +137,9 @@ open class AFComponentDefault(
     }
 
     override fun <T : Any> receiver(forInterface: KClass<T>): T {
-        return super.framework.proxy(forInterface) { handler, proxy, callable, args ->
+        return super.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
             when {
-                forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
+                forInterface.isInstance(self) -> self.reflect().call(methodName, *args)
                 else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
             }
         }
@@ -170,21 +179,26 @@ class PortDefault(
     lateinit var componentAF: AFComponent
 
     private fun <T : Any> outProxy(forInterface: KClass<T>): T {
-        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, args ->
+        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
             //TODO: really want directMembers of forInterface only
             when {
-                Any::equals == callable -> handler.reflect().call(callable.name, *args)
-                Any::hashCode == callable -> handler.reflect().call(callable.name, *args)
+                Any::equals == callable -> handler.reflect().call(methodName, *args)
+                Any::hashCode == callable -> handler.reflect().call(methodName, *args)
                 Any::toString == callable -> "outProxy for $this"
                 else -> {
-                    componentAF.log.trace { "calling ${callable.name}" }
+                    componentAF.log.trace { "calling $methodName" }
                     var result: Any? = null
                     this.allRequired(forInterface).forEach {
                         if (it is Active) {
+                            //FIXME: when bug is fixed
+                            // knock on workaround from ApplicationFrameworkServiceDefault.proxy
+                            // because of jvm name mangling and bug with conversion to kotlinMethod see [https://youtrack.jetbrains.com/issue/KT-34024]
+                            //val sig = callable.reflect().getProperty("signature") as String
+                            //val n = sig.substringBefore("(")
                             val rec = it.af.receiver(forInterface)
-                            result = rec.reflect().call(callable.name, *args)
+                            result = rec.reflect().call(methodName, *args)
                         } else {
-                            result = it.reflect().call(callable.name, *args)
+                            result = it.reflect().call(methodName, *args)
                         }
                     }
                     result
@@ -194,21 +208,21 @@ class PortDefault(
     }
 
     private fun <T : Any> inProxy(forInterface: KClass<T>): T {
-        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, args ->
+        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
             //TODO: really want directMembers of forInterface only
             when {
-                Any::equals == callable -> handler.reflect().call(callable.name, *args)
-                Any::hashCode == callable -> handler.reflect().call(callable.name, *args)
+                Any::equals == callable -> handler.reflect().call(methodName, *args)
+                Any::hashCode == callable -> handler.reflect().call(methodName, *args)
                 Any::toString == callable -> "inProxy for $this"
                 else -> {
-                    componentAF.log.trace { "calling ${callable.name}" }
+                    componentAF.log.trace { "calling ${methodName}" }
                     var result: Any? = null
                     this.allProvided(forInterface).forEach {
                         if (it is Active) {
                             val rec = it.af.receiver(forInterface)
-                            result = rec.reflect().call(callable.name, *args)
+                            result = rec.reflect().call(methodName, *args)
                         } else {
-                            result = it.reflect().call(callable.name, *args)
+                            result = it.reflect().call(methodName, *args)
                         }
                     }
                     result
@@ -217,11 +231,11 @@ class PortDefault(
         }
     }
 
-    override fun <T : Any> provided(providedInterface: KClass<T>): T {
+    override fun <T : Any> forProvided(providedInterface: KClass<T>): T {
         return inProxy(providedInterface)
     }
 
-    override fun <T : Any> required(requiredInterface: KClass<T>): T {
+    override fun <T : Any> forRequired(requiredInterface: KClass<T>): T {
         return outProxy(requiredInterface)
     }
 
@@ -265,7 +279,7 @@ class PortDefault(
         }
     }
 
-    override fun connectInternal(internal: Port) {
+    override fun connectPortInternal(internal: Port) {
         for (prov in this.provided.keys) {
             val providers = internal.allProvided(prov)
             for (provider in providers) {
@@ -282,7 +296,7 @@ class PortDefault(
 
     }
 
-    override fun connect(other: Port) {
+    override fun connectPort(other: Port) {
         for (req in this.required.keys) {
             val objs = other.allProvided(req)
             for (o in objs) {

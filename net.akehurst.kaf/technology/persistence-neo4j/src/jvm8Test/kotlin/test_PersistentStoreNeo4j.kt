@@ -116,7 +116,28 @@ class test_PersystentStoreNeo4j : Application {
     }
 
     @Test
-    fun readAll() {
+    fun readAllIdentity() {
+        // given
+        this.configure()
+
+        val a1 = A("a1")
+        val a2 = A("a2")
+        val a3 = A("a3")
+        val a4 = A("a4")
+        val setOfA = setOf(a1, a2, a3, a4)
+        sut.createAll(A::class, setOfA)
+
+        // when
+        val actual = sut.readAllIdentity(A::class)
+
+        // then
+        val expected = setOf("a1","a2","a3","a4")
+        assertNotNull(actual)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun readAll_withIds() {
         // given
         this.configure()
 

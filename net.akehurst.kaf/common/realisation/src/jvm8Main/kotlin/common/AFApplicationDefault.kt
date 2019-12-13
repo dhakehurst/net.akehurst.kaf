@@ -37,7 +37,7 @@ actual class AFApplicationDefault(
         val initialiseBlock: suspend (self: Application) -> Unit,
         val executeBlock: suspend (self: Application) -> Unit,
         val finaliseBlock: suspend (self: Application) -> Unit
-) : AFApplication {
+) : AFDefault(identity), AFApplication {
 
     actual class Builder(val self:Application,val identity: String) {
         val _defineServices = mutableMapOf<KClass<*>, (commandLineArgs: List<String>) -> Service>()
@@ -54,11 +54,7 @@ actual class AFApplicationDefault(
         }
     }
 
-    override var afHolder: AFHolder? = self
     override var selfIdentity: String? = identity
-
-    override val framework by serviceReference<ApplicationFrameworkService>()
-    val log by logger("logging")
 
     private val _services = mutableMapOf<KClass<*>, Service>()
     override fun <T : Service> service(serviceClass: KClass<T>): T {

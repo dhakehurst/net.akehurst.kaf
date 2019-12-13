@@ -19,6 +19,7 @@ package net.akehurst.kaf.common.api
 import kotlin.reflect.KClass
 
 class ApplicationInstantiationException(message: String) : RuntimeException(message)
+class ApplicationFrameworkServiceException(message: String) : RuntimeException(message)
 class ActiveException(message: String) : RuntimeException(message)
 class ActorException(message: String) : RuntimeException(message)
 class AyncException(message: String) : RuntimeException(message)

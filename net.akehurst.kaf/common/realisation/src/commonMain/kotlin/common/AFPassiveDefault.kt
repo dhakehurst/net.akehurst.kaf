@@ -30,23 +30,19 @@ inline fun afPassive(selfIdentity: String? = null, init: AFPassiveDefault.Builde
 }
 
 open class AFPassiveDefault(
-        override var selfIdentity: String? = null
-) : AFPassive {
+        selfIdentity: String? = null,
+        open val initialiseBlock: suspend (self: Passive) -> Unit
+) : AFDefault(selfIdentity), AFPassive {
 
     class Builder(val selfIdentity: String?) {
+        var initialise: suspend (self: Passive) -> Unit = {}
         fun build(): AFPassive {
-            return AFPassiveDefault(selfIdentity)
+            return AFPassiveDefault(selfIdentity, initialise)
         }
     }
 
-    override var afHolder: AFHolder? = null
-    override val self: Passive
-        get() {
-            return when (afHolder) {
-                is Passive -> afHolder as Passive? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
-                else -> throw ApplicationInstantiationException("afHolder must be of type Passive for $identity")
-            }
-        }
+    override val self : Passive get() = super.self()
+
     override var owner: AFOwner? = null
     val ownerIdentity: String
         get() {
@@ -61,29 +57,15 @@ open class AFPassiveDefault(
     override val identity: String
         get() = "${ownerIdentity}$selfIdentity"
 
-    override val framework by serviceReference<ApplicationFrameworkService>()
 
-    override val log by logger("logging")
-
-    override fun externalConnections(kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>> = framework.externalConnections(self, kclass)
-
-    override fun doInjections(root: Passive) {
-        framework.doInjections(emptyList<String>(), root)
-    }
-
-    override fun hashCode(): Int {
-        return this.identity.hashCode()
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return when (other) {
-            is AFPassive -> this.identity == other.identity
-            else -> false
+    override suspend fun initialise() {
+        log.trace { "initialise parts" }
+        val parts = super.framework.partsOf(self).filterIsInstance<Passive>()
+        parts.forEach {
+            it.af.initialise()
         }
-    }
-
-    override fun toString(): String {
-        return "AF{$identity}"
+        log.trace { "initialise" }
+        this.initialiseBlock(this.self)
     }
 }
 

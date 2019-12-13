@@ -21,16 +21,17 @@ import kotlin.reflect.KClass
 
 
 open class PersistenceException : RuntimeException {
-    constructor(message:String) : super(message)
+    constructor(message: String) : super(message)
 }
 
 interface PersistentStore {
 
-    fun configure(settings:Map<String, Any>)
+    fun configure(settings: Map<String, Any>)
 
     fun <T : Identifiable> create(type: KClass<T>, item: T)
     fun <T : Identifiable> createAll(type: KClass<T>, itemSet: Set<T>)
-    fun <T : Identifiable> read(type: KClass<T>, identity:Any): T
+    fun <T : Identifiable> read(type: KClass<T>, identity: Any): T
+    fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String>
     fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T>
     fun <T : Identifiable> update(type: KClass<T>, item: T)
     fun <T : Identifiable> updateAll(type: KClass<T>, itemSet: Set<T>)
@@ -43,6 +44,6 @@ interface Filter {
 }
 
 data class FilterProperty(
-        val propertyName:String,
-        val value:Any
+        val propertyName: String,
+        val value: Any
 ) : Filter

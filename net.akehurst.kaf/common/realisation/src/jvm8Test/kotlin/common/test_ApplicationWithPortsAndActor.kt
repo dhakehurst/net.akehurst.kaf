@@ -17,7 +17,6 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.*
-import net.akehurst.kaf.service.api.serviceReference
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
@@ -106,7 +105,7 @@ class test_ApplicationWithPortsAndActor {
             defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
 
             initialise = {
-                greeter.port_display.connect(console.port_output)
+                greeter.port_display.connectPort(console.port_output)
             }
         }
     }

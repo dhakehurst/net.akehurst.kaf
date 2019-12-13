@@ -23,34 +23,29 @@ import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.externalConnection
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
+import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
 import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 import kotlin.reflect.KClass
 
-class PersistentStoreHJsonOverFilesystem(
+class PersistentStoreHJsonOverMapOfString(
 ) : PersistentStore, Component {
 
-    class FoundReferenceException : RuntimeException {
-        constructor() : super()
-    }
+    data class Index(
+            val kClass: KClass<*>,
+            val identity:String
+    )
 
-    val uriPrefix: String by configuredValue { "./" }
-
-    var fs: PersistenceFilesystem by externalConnection<PersistenceFilesystem>()
+    var map = mutableMapOf<Index,String>()
 
     private val serialiser = KSerialiserHJson()
 
-    @ExperimentalStdlibApi
-    private fun buildHJson(rootItem: Identifiable): ByteArray {
+    private fun buildHJson(rootItem: Identifiable): String {
         val doc = this.serialiser.toHJson(rootItem, rootItem)
-        val bytes = doc.toHJsonString().encodeToByteArray()
-        return bytes
-    }
-
-    private fun calcUri(objectIdentity: String): String {
-        return this.uriPrefix + objectIdentity + ".hjson"
+        val str = doc.toHJsonString()
+        return str
     }
 
     // --- KAF ---
@@ -88,34 +83,29 @@ class PersistentStoreHJsonOverFilesystem(
         }
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Identifiable> create(type: KClass<T>, item: T) {
-        val uri = calcUri(item.identity.toString())
-        val bytes = buildHJson(item)
-        this.fs.write(uri, bytes)
+        val id = Index(type, item.identity.toString())
+        val hjsonStr = buildHJson(item)
+        this.map[id] = hjsonStr
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Identifiable> createAll(type: KClass<T>, itemSet: Set<T>) {
         itemSet.forEach {
             this.create(type, it)
         }
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Identifiable> read(type: KClass<T>, identity: Any): T {
-        val uri = calcUri(identity.toString())
-        val bytes = fs.read(uri)
-        val hjsonStr = bytes.decodeToString()
+        val id = Index(type, identity.toString())
+        val hjsonStr = this.map[id] ?: throw PersistenceException("Item of type ${type.simpleName} not found with identity $identity")
         val item = this.serialiser.toData<T>(hjsonStr)
         return item
     }
 
     override fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String> {
-        TODO("not implemented")
+        return this.map.keys.filter { it.kClass==type }.map { it.identity }.toSet()
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
         val result = identities.map {
             this.read(type, it)

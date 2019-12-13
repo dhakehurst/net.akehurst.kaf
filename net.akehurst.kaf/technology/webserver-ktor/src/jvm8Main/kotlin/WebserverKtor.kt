@@ -43,9 +43,11 @@ import io.ktor.util.generateNonce
 import io.ktor.websocket.WebSocketServerSession
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
+import it.lamba.ktor.features.SinglePageApplication
 import kotlinx.coroutines.channels.consumeEach
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.common.realisation.afComponent
+import net.akehurst.kaf.common.realisation.asyncSend
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.messageChannel.api.ChannelIdentity
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
@@ -59,7 +61,8 @@ import kotlin.reflect.full.primaryConstructor
  * sessionType must have a primary constructor that takes one string argument
  */
 class WebserverKtor<T : Any>(
-        val sessionType: KClass<T>
+        val sessionType: KClass<T>,
+        val creaateDefaultSession: (nonce: String) -> T
 ) : Component, MessageChannel<T>, Webserver {
 
     lateinit var port_server: Port
@@ -91,20 +94,20 @@ class WebserverKtor<T : Any>(
                 install(DefaultHeaders)
                 install(CallLogging)
                 install(Routing)
-                install(WebSockets)
                 install(Sessions) {
                     cookie("SESSION", sessionType)
                 }
+                install(WebSockets)
                 intercept(ApplicationCallPipeline.Features) {
                     // create session if one does not exist already
                     val n = call.sessions.findName(sessionType)
                     if (call.sessions.get(n) == null) {
-                        val session = sessionType.primaryConstructor!!.call(generateNonce())
+                        val session = creaateDefaultSession(generateNonce()) //sessionType.primaryConstructor!!.call(generateNonce())
                         call.sessions.set(n, session)
                     }
                 }
                 routing {
-                    webSocket("/ws") {
+                    webSocket("/ws") {//FIXME: hard coded value
                         handleWebsocketConnection(this)
                     }
                 }
@@ -129,6 +132,14 @@ class WebserverKtor<T : Any>(
         }
     }
 
+    fun addSinglePageApplication(pathToResources: String, spaRoute: String = "", defaultPage: String = "index.html", useFilesNotResource: Boolean = false) {
+        this.server.application.install(SinglePageApplication) {
+            this.folderPath = pathToResources
+            this.spaRoute = spaRoute
+            this.defaultPage = defaultPage
+            this.useFiles = useFilesNotResource
+        }
+    }
 
     // --- MessageChannel ---
 
@@ -153,7 +164,18 @@ class WebserverKtor<T : Any>(
                             val text = frame.readText()
                             val channelId = ChannelIdentity(text.substringBefore(MessageChannel.DELIMITER))
                             val message = text.substringAfter(MessageChannel.DELIMITER)
-                            this.receiveActions[channelId]?.invoke(session, message)
+                            af.log.trace { "Message ${channelId.value}: $message" }
+                            asyncSend {
+                                try {
+                                    if (this.receiveActions.containsKey(channelId)) {
+                                        this.receiveActions[channelId]?.invoke(session, message)
+                                    } else {
+                                        af.log.error { "No action registered for $channelId" }
+                                    }
+                                } catch (t:Throwable) {
+                                    t.printStackTrace()
+                                }
+                            }
                         }
                         is Frame.Binary -> {
                         }
@@ -173,17 +195,17 @@ class WebserverKtor<T : Any>(
         }
     }
 
-    override suspend fun <T : Any> receiveAll(interfaceToReceive: KClass<T>, target: T) {
+    override fun <T : Any> receiveAll(interfaceToReceive: KClass<T>, target: T) {
         TODO("not implemented")
     }
 
-    override suspend fun receive(channelId: ChannelIdentity, action: suspend (endPointId: T, message: String) -> Unit) {
+    override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: T, message: String) -> Unit) {
         this.receiveActions[channelId] = action
     }
 
-    override suspend fun send(endPointId: T, channelId: ChannelIdentity, message: String) {
+    override fun send(endPointId: T, channelId: ChannelIdentity, message: String) {
         val ws = connections[endPointId] ?: throw MessageChannelException("Endpoint not found for $endPointId")
-        val frame = Frame.Text("${channelId}${MessageChannel.DELIMITER}${message}")
+        val frame = Frame.Text("${channelId.value}${MessageChannel.DELIMITER}${message}")
         ws.outgoing.offer(frame)
     }
 

@@ -21,41 +21,50 @@ import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
 
-inline fun afActive(selfIdentity: String?=null, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
-    val builder = AFActiveDefault.Builder( selfIdentity)
+inline fun afActive(selfIdentity: String? = null, init: AFActiveDefault.Builder.() -> Unit = {}): AFActive {
+    val builder = AFActiveDefault.Builder(selfIdentity)
     builder.init()
     return builder.build()
 }
 
 open class AFActiveDefault(
         selfIdentity: String? = null,
-        val initialiseBlock: suspend (self:Active) -> Unit,
-        val executeBlock: suspend (self:Active) -> Unit,
-        val finaliseBlock: suspend (self:Active) -> Unit
-) : AFPassiveDefault( selfIdentity), AFActive {
+        val initialiseBlock: suspend (self: Active) -> Unit,
+        val executeBlock: suspend (self: Active) -> Unit,
+        val finaliseBlock: suspend (self: Active) -> Unit
+) : AFDefault(selfIdentity), AFActive {
 
     class Builder(val selfIdentity: String?) {
-        var initialise: suspend (self:Active) -> Unit = {}
-        var execute: suspend (self:Active) -> Unit = {}
-        var finalise: suspend (self:Active) -> Unit = {}
+        var initialise: suspend (self: Active) -> Unit = {}
+        var execute: suspend (self: Active) -> Unit = {}
+        var finalise: suspend (self: Active) -> Unit = {}
         fun build(): AFActive {
             return AFActiveDefault(selfIdentity, initialise, execute, finalise)
         }
     }
-    override val self: Active
+
+    override val self: Active get() = super.self()
+
+    override var owner: AFOwner? = null
+    val ownerIdentity: String
         get() {
-            return when(afHolder) {
-                is Active -> afHolder as Active? ?: throw ApplicationInstantiationException("afHolder has not been set to a value")
-                else -> throw ApplicationInstantiationException("afHolder must be of type Active for $identity")
+            val o = owner
+            return if (null == o) {
+                ""
+            } else {
+                o.identity + "."
             }
         }
 
+    override val identity: String
+        get() = "${ownerIdentity}$selfIdentity"
+
     override suspend fun initialise() {
-        val activeParts = super.framework.partsOf(self).filterIsInstance<Active>()
-        activeParts.forEach {
+        log.trace { "initialise parts" }
+        val parts = super.framework.partsOf(self).filterIsInstance<Passive>()
+        parts.forEach {
             it.af.initialise()
         }
-
         log.trace { "initialise" }
         this.initialiseBlock(this.self)
     }
@@ -99,10 +108,10 @@ open class AFActiveDefault(
         }
     }
 
-    override fun <T : Any> receiver(forInterface:KClass<T>): T {
-        return super.framework.proxy(forInterface) { handler, proxy, callable, args ->
+    override fun <T : Any> receiver(forInterface: KClass<T>): T {
+        return super.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
             when {
-                forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
+                forInterface.isInstance(self) -> self.reflect().call(methodName, *args)
                 else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
             }
         }

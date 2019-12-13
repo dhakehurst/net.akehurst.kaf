@@ -24,8 +24,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 plugins {
-    kotlin("multiplatform") version("1.3.60") apply false
-    id("com.jfrog.bintray") version("1.8.4") apply false
+    kotlin("multiplatform") version ("1.3.60") apply false
+    id("net.akehurst.kotlin.kt2ts") version ("1.4.0") apply false
+    id("com.jfrog.bintray") version ("1.8.4") apply false
 }
 
 allprojects {
@@ -45,11 +46,13 @@ fun getProjectProperty(s: String) = project.findProperty(s) as String?
 
 subprojects {
 
-    apply(plugin="org.jetbrains.kotlin.multiplatform")
+    apply(plugin = "org.jetbrains.kotlin.multiplatform")
+    apply(plugin = "net.akehurst.kotlin.kt2ts")
     apply(plugin = "maven-publish")
     apply(plugin = "com.jfrog.bintray")
 
     repositories {
+        mavenLocal()
         mavenCentral()
         jcenter()
     }
@@ -82,9 +85,11 @@ subprojects {
     fun fBbuildStamp(): String {
         return DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(now)
     }
+
     fun fBuildDate(): String {
         return DateTimeFormatter.ofPattern("yyyy-MMM-dd").withZone(ZoneId.of("UTC")).format(now)
     }
+
     fun fBuildTime(): String {
         return DateTimeFormatter.ofPattern("HH:mm:ss z").withZone(ZoneId.of("UTC")).format(now)
     }
@@ -127,7 +132,7 @@ subprojects {
         key = getProjectProperty("bintrayApiKey")
         publish = true
         override = true
-        setPublications("kotlinMultiplatform","metadata","js","jvm8")
+        setPublications("kotlinMultiplatform", "metadata", "js", "jvm8")
         pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
             repo = "maven"
             name = "${rootProject.name}"

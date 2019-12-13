@@ -39,7 +39,7 @@ class FromNeo4JConverter(
         val rootLabel = datatype.qualifiedName(".")
         val rootNodeName = "/" + identity.toString()
         //TODO: handle composition and reference!
-        val cypherStatement = CypherMatchNode(rootLabel, rootNodeName)
+        val cypherStatement = CypherMatchNodeByTypeAndPath(rootLabel, rootNodeName)
 
         val composite = datatype.property.values.filter {
             it.propertyType.declaration.isPrimitive.not()
@@ -59,7 +59,7 @@ class FromNeo4JConverter(
                 else -> {
                     val childLabel = pt.declaration.qualifiedName(".")
                     // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
-                    val match = CypherMatchNode(childLabel, ppath)
+                    val match = CypherMatchNodeByTypeAndPath(childLabel, ppath)
                     match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
                     listOf(match)
                 }
@@ -69,13 +69,13 @@ class FromNeo4JConverter(
     }
 
     private fun createMatchSet(path: String): List<CypherStatement> {
-        val set = CypherMatchNode(CypherStatement.SET_TYPE_LABEL, path)
+        val set = CypherMatchNodeByTypeAndPath(CypherStatement.SET_TYPE_LABEL, path)
         return listOf(set)
     }
 
     private fun createMatchList(path: String, elementType: TypeDeclaration): List<CypherStatement> {
         return if (elementType.isPrimitive) {
-            val list = CypherMatchNode(CypherStatement.LIST_TYPE_LABEL, path)
+            val list = CypherMatchNodeByTypeAndPath(CypherStatement.LIST_TYPE_LABEL, path)
             return listOf(list)
         } else {
             val list = CypherMatchList(path, elementType.qualifiedName("."))
@@ -92,7 +92,7 @@ class FromNeo4JConverter(
     private fun createCypherMatchObject(typeDeclaration: TypeDeclaration, objPathName: String): List<CypherStatement> {
         val objLabel = typeDeclaration.qualifiedName(".")
         //TODO: handle composition and reference!
-        val cypherStatement = CypherMatchNode(objLabel, objPathName)
+        val cypherStatement = CypherMatchNodeByTypeAndPath(objLabel, objPathName)
         cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(objPathName)))
         val composite = (typeDeclaration as Datatype).property.values.filter {
             it.propertyType.declaration.isPrimitive.not()
@@ -112,13 +112,26 @@ class FromNeo4JConverter(
                 else -> {
                     val childLabel = pt.declaration.qualifiedName(".")
                     // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
-                    val match = CypherMatchNode(childLabel, ppath)
+                    val match = CypherMatchNodeByTypeAndPath(childLabel, ppath)
                     match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
                     listOf(match)
                 }
             }
         }
         return listOf(cypherStatement) + composite
+    }
+
+    fun fetchAllIds(datatype: Datatype) : Set<String> {
+        val rootLabel = datatype.qualifiedName(".")
+        val key = "n"
+        val cypherStatements = listOf(
+                CypherMatchNodeByType(rootLabel, key)
+        )
+        val records = reader.executeReadCypher(cypherStatements)
+        val ids = records.map { rec ->
+            rec[key].asNode()[CypherStatement.PATH_PROPERTY].asString().substring(1)
+        }.toSet()
+        return ids
     }
 
     fun convertRootObject(datatype: Datatype, identity: Any): Any {

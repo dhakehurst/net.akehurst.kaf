@@ -19,6 +19,7 @@ package net.akehurst.kaf.common.api
 import net.akehurst.kaf.service.api.Service
 import net.akehurst.kaf.service.logging.api.Logger
 import net.akehurst.kotlinx.collections.MapNonNull
+import kotlin.js.JsName
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -32,7 +33,11 @@ interface ApplicationFrameworkService : Service {
 
     fun doInjections(commandLineArgs: List<String>, root: AFHolder)
 
-    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
+    fun makeAccessible(callable:KCallable<*>)
+    fun callOn(obj:Any, callableName:String) : Any
+
+//    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
+    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, callableName:String, args: Array<out Any>) -> Any?): T
     /**
      * request application shutdown
      * all currently queued tasks should be finished
@@ -83,45 +88,56 @@ interface Port {
      * return an object that enables you to call methods on the port
      * all connections to the port that provide the required interface will receive the message
      */
-    fun <T : Any> required(requiredInterface: KClass<T>): T
+    @JsName("forRequired")
+    fun <T : Any> forRequired(requiredInterface: KClass<T>): T
 
     /**
      * return an object that enables you to call methods on the port
      * all objects that provide the interface will receive the message
      */
-    fun <T : Any> provided(providedInterface: KClass<T>): T
+    @JsName("forProvided")
+    fun <T : Any> forProvided(providedInterface: KClass<T>): T
 
     /**
      * return the objects that realise the required interface
      */
+    @JsName("allRequired")
     fun <T : Any> allRequired(requiredInterface: KClass<T>): Set<T>
 
     /**
      * return the objects that provide the given interface
      */
+    @JsName("allProvided")
     fun <T : Any> allProvided(providedInterface: KClass<T>): Set<T>
 
     /**
      * connect the port to another at the same level, i.e. provides is matched to requires in each direction
      */
-    fun connect(other: Port)
+    @JsName("connectPort")
+    fun connectPort(other: Port)
 
     /**
      * connect the port to another at the same level, i.e. provides is matched to to @ExternalConnection fields and requires matched to implemented interfaces
      */
+    @JsName("connect")
     fun connect(other: Passive)
 
     /**
      * connect the port to another internal port, i.e. provides is matched to provides and requires matched to requires
      */
-    fun connectInternal(internal: Port)
+    @JsName("connectPortInternal")
+    fun connectPortInternal(internal: Port)
 
     /**
      * connect the port to an internal object, i.e. provides is matched to implemented interface and requires matched to @ExternalConnection fields
      */
+    @JsName("connectInternal")
     fun connectInternal(internal: Passive)
 
+    @JsName("provideRequired")
     fun <T : Any> provideRequired(interfaceType: KClass<out T>, provider: T)
+
+    @JsName("provideProvided")
     fun <T : Any> provideProvided(interfaceType: KClass<out T>, provider: T)
 }
 
@@ -134,6 +150,9 @@ interface AF : Identifiable {
     var afHolder: AFHolder?
     override val identity: String
     val framework: ApplicationFrameworkService
+    val log: Logger
+    fun externalConnections(kClass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
+    fun doInjections(root: Passive)
 }
 
 interface AFOwner : AF {
@@ -142,14 +161,14 @@ interface AFOwner : AF {
 interface AFPassive : AFOwner {
     val self: Passive
     var owner: AFOwner?
-    val log: Logger
-    fun externalConnections(kClass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
-    fun doInjections(root: Passive)
+
+    @JsName("initialise")
+    suspend fun initialise()
+
 }
 
 interface AFActive : AFPassive, AFOwner {
     override val self: Active
-    suspend fun initialise()
     suspend fun start()
     suspend fun join()
     suspend fun shutdown()

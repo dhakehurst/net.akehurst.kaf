@@ -63,7 +63,7 @@ import kotlin.reflect.KClass
 class PersistentStoreNeo4j(
 ) : PersistentStore, Component {
 
-    lateinit var port_persist:Port
+    lateinit var port_persist: Port
 
     private val _registry = DatatypeRegistry()
 
@@ -75,7 +75,15 @@ class PersistentStoreNeo4j(
     // --- set when config is called ---
     private var _neo4jService: GraphDatabaseService? = null
     private lateinit var _neo4j: Driver
-    private lateinit var neo4JReader: Neo4JReader
+    private lateinit var _neo4JReader: Neo4JReader
+
+    private val neo4JReader: Neo4JReader get() {
+        try {
+            return this._neo4JReader
+        } catch (t:Throwable) {
+            throw PersistenceException("problem accessing neo4J database, perhaps configure has not been called with valid settings")
+        }
+    }
 
     private fun <T : Identifiable> createCypherMergeStatements(rootItem: T): List<CypherStatement> {
         val rootIdentity = rootItem.identity
@@ -205,8 +213,11 @@ class PersistentStoreNeo4j(
             objectBegin { path, info, obj, datatype ->
                 af.log.debug { "walk: objectBegin: $path, $info" }
                 val objId = (rootPath + path).joinToString("/", "/")
+                val additionalLabels = datatype.superTypes.map {
+                    it.type.declaration.qualifiedName(".")
+                }
                 val objLabel = datatype.qualifiedName(".")
-                val obj = CypherObject(objLabel, objId)
+                val obj = CypherObject(objLabel, objId, additionalLabels)
                 currentObjStack.push(obj)
                 WalkInfo(info.up, info.acc + obj)
             }
@@ -294,7 +305,7 @@ class PersistentStoreNeo4j(
         port_persist = port("persist") {
             provides(PersistentStore::class)
         }
-        initialise = {self->
+        initialise = { self ->
             self.af.port["persist"].connectInternal(self)
         }
         execute = {
@@ -341,7 +352,7 @@ class PersistentStoreNeo4j(
             }
         }
         af.log.debug { "success: connected to Neo4j: ${uri} as user ${user}" }
-        this.neo4JReader = Neo4JReader( this._neo4j)
+        this._neo4JReader = Neo4JReader(this._neo4j)
         af.doInjections(this.neo4JReader)
 
         //default DateTime mapping
@@ -357,13 +368,15 @@ class PersistentStoreNeo4j(
                     DateTime.fromUnix(unixMillis)
                 })
 
-        val komposite = settings["komposite"] as String
+        val komposite = settings["komposite"] as List<String>
         if (settings.containsKey("primitiveMappers")) {
             defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<*>, PrimitiveMapper<*, *>>)
         }
         af.log.debug { "trying: to register komposite information: $komposite" }
-        this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, emptyMap())
-        this._registry.registerFromConfigString(komposite, defaultPrimitiveMappers)
+        komposite.forEach {
+            this._registry.registerFromConfigString(it, emptyMap())
+        }
+        this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, defaultPrimitiveMappers)
     }
 
     override fun <T : Identifiable> create(type: KClass<T>, item: T) {
@@ -388,12 +401,20 @@ class PersistentStoreNeo4j(
         return item as T
     }
 
+    override fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String> {
+        val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.session().typeSystem())
+        val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
+        val allIds = fromNeo4JConverter.fetchAllIds(dt)
+        return allIds
+    }
+
     override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
         af.log.trace { "readAll(${type.simpleName}, $identities)" }
         val itemSet = identities.map {
             read(type, it)
         }.toSet()
         return itemSet
+
     }
 
     override fun <T : Identifiable> update(type: KClass<T>, item: T) {

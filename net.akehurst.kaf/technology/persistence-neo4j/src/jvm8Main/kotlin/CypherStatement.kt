@@ -200,22 +200,43 @@ data class CypherProperty(val name: String, val value: CypherValue) {
 
 data class CypherObject(
         override val label: String,
-        override val path: String
+        override val path: String,
+        val additionalLabels : List<String> = emptyList()
 ) : CypherElement {
 
     val properties = mutableListOf<CypherProperty>()
 
     override fun toCypherStatement(): String {
+        val labelList = (listOf(label)+additionalLabels).joinToString(":")
         val propertyStr = this.properties.filter { null != it.value.value }.map { it.toCypherString() }.joinToString(", ")
         return if (propertyStr.isEmpty()) {
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+            "MERGE (:`$labelList`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
         } else {
-            "MERGE (:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path', $propertyStr})"
+            "MERGE (:`$labelList`{`${CypherStatement.PATH_PROPERTY}`:'$path', $propertyStr})"
         }
     }
 }
 
-data class CypherMatchNode(
+data class CypherMatchNodeByType(
+        val label: String,
+        val key:String
+) : CypherStatement {
+    val properties = mutableListOf<CypherProperty>()
+    override fun toCypherStatement(): String {
+        val propertyStr = this.properties.map { it.toCypherString() }.joinToString(", ")
+        return if (propertyStr.isEmpty()) {
+            "MATCH (n:`$label`) RETURN `$key`"
+        } else {
+            "MATCH (n:`$label`{$propertyStr}) RETURN `$key`"
+        }
+    }
+
+    override fun toString(): String {
+        return this.toCypherStatement()
+    }
+}
+
+data class CypherMatchNodeByTypeAndPath(
         val label: String,
         val path: String
 ) : CypherStatement {

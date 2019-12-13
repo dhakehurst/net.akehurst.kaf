@@ -17,12 +17,10 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.*
-import net.akehurst.kaf.common.api.annotations.CompositePart
 import net.akehurst.kaf.service.api.Service
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 import kotlin.reflect.KVisibility
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 
@@ -55,26 +53,16 @@ class ApplicationCompositionWalker {
                 propFunc(self, property)
 
                 if (compositeTypes.any { property.returnType.isSubtypeOf(it) }) {
-                    if (property.visibility!=KVisibility.PRIVATE) {
+                    if (property.visibility != KVisibility.PRIVATE) {
                         val part = property.getter.call(self)
                         if (null != part && part is Passive) {
                             this.walkDepthFirst(part, selfFunc, propFunc)
                         }
                     } else {
                         //TODO: warning! maybe
-                       // throw ApplicationInstantiationException("Cannot walk private property $property")
+                        // throw ApplicationInstantiationException("Cannot walk private property $property")
                     }
                 }
-
-                // walk things marked as 'CompositePart'
-                val annotation = property.findAnnotation<CompositePart>()
-                if (null != annotation) {
-                    val part = property.getter.call(self)
-                    if (null != part && part is Passive) {
-                        this.walkDepthFirst(part, selfFunc, propFunc)
-                    }
-                }
-
             }
         }
     }
@@ -91,23 +79,13 @@ class ApplicationCompositionWalker {
 
     private fun _walkAfParts(self: Owner, partFunc: (part: Passive, property: KProperty<*>) -> Unit, compositeTypes: List<KType>) {
         self::class.members.filter { it is KProperty<*> }.forEach { property ->
-            if (property is KProperty<*>) {
+            if (property is KProperty<*> && property.visibility != KVisibility.PRIVATE) {
                 if (compositeTypes.any { property.returnType.isSubtypeOf(it) }) {
                     val part = property.getter.call(self)
                     if (null != part && part is Passive) {
                         partFunc(part, property)
                     }
                 }
-
-                // walk things marked as 'CompositePart'
-                val annotation = property.findAnnotation<CompositePart>()
-                if (null != annotation) {
-                    val part = property.getter.call(self)
-                    if (null != part && part is Passive) {
-                        partFunc(part, property)
-                    }
-                }
-
             }
         }
     }

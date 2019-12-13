@@ -64,6 +64,10 @@ class PersistentStoreLocalFS(
         TODO("not implemented")
     }
 
+    override fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String> {
+        TODO("not implemented")
+    }
+
     override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
         TODO("not implemented")
     }

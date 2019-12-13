@@ -16,6 +16,7 @@
 
 package net.akehurst.kaf.technology.webserver.ktor
 
+import io.ktor.util.generateNonce
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
@@ -35,7 +36,9 @@ class test_HelloWorldApp(
         afId:String
 ) : Application {
 
-    val webserver = WebserverKtor(this, "webserver")
+    val webserver = WebserverKtor(String::class) {
+        generateNonce()
+    }
 
     override val af = afApplication(this, afId) {
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }

@@ -18,7 +18,7 @@ actual class AFApplicationDefault(
         initialise: () -> Unit,
         execute: () -> Unit,
         finalise: () -> Unit
-) : AFApplication {
+) :  AFDefault(identity), AFApplication {
 
     actual class Builder(
             val self: Application,

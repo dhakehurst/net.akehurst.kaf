@@ -27,7 +27,9 @@ expect fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, bl
 
 expect class ApplicationFrameworkServiceDefault : ApplicationFrameworkService {
     override fun partsOf(composite: Owner) : List<Passive>
-    override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
+    override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, methodName:String, args: Array<out Any>) -> Any?): T
+    override fun makeAccessible(callable: KCallable<*>)
+    override fun callOn(obj:Any, callableName:String) : Any
     override fun doInjections(commandLineArgs: List<String>, root: AFHolder)
     override fun externalConnections(self: Passive, kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
     override fun shutdown()
