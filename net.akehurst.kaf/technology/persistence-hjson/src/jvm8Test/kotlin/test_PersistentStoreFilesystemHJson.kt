@@ -104,7 +104,7 @@ class test_PersistentStoreFilesystemHJson : Application {
                 "uri" to "bolt://localhost:7777",
                 "user" to "neo4j",
                 "password" to "neo4j",
-                "komposite" to KOMPOSITE
+                "komposite" to listOf(KOMPOSITE)
         ))
     }
 
@@ -114,7 +114,7 @@ class test_PersistentStoreFilesystemHJson : Application {
         this.configure()
 
         val a = A("a")
-        sut.create(A::class, a)
+        sut.create(A::class, a)  { identity }
     }
 
     @ExperimentalStdlibApi
@@ -127,7 +127,7 @@ class test_PersistentStoreFilesystemHJson : Application {
         val a3 = A("a3")
         val a4 = A("a4")
         val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        sut.createAll(A::class, setOfA) { identity }
     }
 
     @ExperimentalStdlibApi
@@ -136,7 +136,7 @@ class test_PersistentStoreFilesystemHJson : Application {
         // given
         this.configure()
         val a = A("a")
-        sut.create(A::class, a)
+        sut.create(A::class, a)  { identity }
 
         // when
         val actual = sut.read(A::class, "a")
@@ -158,10 +158,9 @@ class test_PersistentStoreFilesystemHJson : Application {
         val a3 = A("a3")
         val a4 = A("a4")
         val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        sut.createAll(A::class, setOfA)  { identity }
 
         // when
-        val filter = FilterProperty("prop", "a")
         val actual = sut.readAll(A::class, setOf("a1","a2","a3","a4"))
 
         // then

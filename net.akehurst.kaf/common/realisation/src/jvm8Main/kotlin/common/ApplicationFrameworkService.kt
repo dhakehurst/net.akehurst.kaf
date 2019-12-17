@@ -72,7 +72,7 @@ actual class ApplicationFrameworkServiceDefault(
     actual override fun callOn(obj:Any, callableName:String) : Any {
         return obj::class.members.first { it.name==callableName }
     }
-
+/*
     actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, methodName:String, args: Array<out Any>) -> Any?): T {
         val handler = object: InvocationHandler {
             override fun invoke(proxy: Any?, method: Method?, args: Array<out Any>?): Any? {
@@ -98,6 +98,7 @@ actual class ApplicationFrameworkServiceDefault(
         val proxy = Proxy.newProxyInstance(forInterface.java.classLoader, arrayOf(forInterface.java), handler)
         return proxy as T
     }
+ */
 
     actual override fun doInjections(commandLineArgs: List<String>, root: AFHolder) {
         this.setupAF(root)

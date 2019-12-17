@@ -34,6 +34,7 @@ dependencies {
     commonTestImplementation(project(":kaf-service-logging-console"))
 
     // because IntelliJ can't seem to resolve runtime transitive dependencies correctly!!
+    /*
     commonTestImplementation("com.soywiz.korlibs.korio:korio:$version_korio")
     commonTestImplementation("net.akehurst.kotlinx:kotlinx-collections:$version_kotlinx")
     commonTestImplementation("net.akehurst.kotlinx:kotlinx-reflect:$version_kotlinx")
@@ -45,4 +46,5 @@ dependencies {
     commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$version_coroutines")
     jvm8TestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
     jsTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$version_coroutines")
+     */
 }

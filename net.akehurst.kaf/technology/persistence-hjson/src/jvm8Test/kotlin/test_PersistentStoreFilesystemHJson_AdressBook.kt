@@ -82,7 +82,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
 
     val sut = PersistentStoreHJsonOverFilesystem()
     val fs = object : PersistenceFilesystem {
-        val map = mutableMapOf<String,ByteArray>()
+        val map = mutableMapOf<String, ByteArray>()
         override fun write(uri: String, bytes: ByteArray) {
             println("Writing to fs at : $uri")
             println(uri.uniVfs.absolutePath)
@@ -117,7 +117,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
 
     @Test
     fun configure() {
-        val primitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*,*>>()
+        val primitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
         this.sut.configure(mapOf(
                 "embedded" to true,
                 "uri" to "bolt://localhost:7777",
@@ -125,7 +125,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
 //                "uri" to "bolt://localhost:7687",
                 "user" to "neo4j",
                 "password" to "admin",
-                "komposite" to KOMPOSITE,
+                "komposite" to listOf(KOMPOSITE),
                 "primitiveMappers" to primitiveMappers
         ))
     }
@@ -138,7 +138,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         val c = Contact("adam")
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -154,7 +154,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -171,7 +171,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         c.emails = mutableListOf("adam@pop.com", "adam.ant@pop.com")
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -183,7 +183,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         this.configure()
 
         val abk = AddressBook("friends")
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
     }
 
     @ExperimentalStdlibApi
@@ -195,7 +195,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         val c1 = Contact("adam")
         abk.contacts.put(c1.alias, c1)
 
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
     }
 
     @ExperimentalStdlibApi
@@ -204,7 +204,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         // given
         this.configure()
         val abk = AddressBook("friends")
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")
@@ -232,7 +232,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         c1.phone.add(PhoneNumber("home", "12432523523"))
         c1.phone.add(PhoneNumber("work", "09876543123"))
         abk.contacts.put(c1.alias, c1)
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")
@@ -261,7 +261,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         abk.contacts.put(c1.alias, c1)
         val c2 = Contact("brian")
         abk.contacts.put(c2.alias, c2)
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")

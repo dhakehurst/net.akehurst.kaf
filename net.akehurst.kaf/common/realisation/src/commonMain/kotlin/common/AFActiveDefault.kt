@@ -17,6 +17,7 @@
 package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.*
+import net.akehurst.kotlinx.reflect.proxyFor
 import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
@@ -109,9 +110,9 @@ open class AFActiveDefault(
     }
 
     override fun <T : Any> receiver(forInterface: KClass<T>): T {
-        return super.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
+        return proxyFor(forInterface) { handler, proxy, callable, methodName, args ->
             when {
-                forInterface.isInstance(self) -> self.reflect().call(methodName, *args)
+                forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
                 else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
             }
         }

@@ -1,8 +1,8 @@
 val version_komposite: String by project
 val version_kotlinx: String by project
 
-val version_neo4j = "3.5.6"
-val version_neo4j_driver = "1.7.5"
+val version_neo4j = "3.5.13"
+val version_neo4j_driver = "4.0.0"
 val version_agl: String by project
 val version_klock: String by project
 val version_coroutines:String by project

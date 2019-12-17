@@ -20,6 +20,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import net.akehurst.kaf.common.api.*
+import net.akehurst.kotlinx.reflect.proxyFor
 import net.akehurst.kotlinx.reflect.reflect
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
@@ -262,7 +263,7 @@ open class AFActorDefault(
 
     override fun <T : Any> receiver(forInterface: KClass<T>): T {
         //TODO: cache receivers
-        return super.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
+        return proxyFor(forInterface) { handler, proxy, callable, methodName, args ->
             //TODO: ....maybe it does not matter if self implements the interface..so long as it has an 'andWhen' called?
             val lastArg = args.lastOrNull()
             if (lastArg is Continuation<*>) {
@@ -272,19 +273,19 @@ open class AFActorDefault(
                     forInterface.isInstance(self) -> when (declaredArgsSize) {
                         //TODO: what asyncContext should we use here?
                         0 -> receive0(callable, asyncCallContext) {
-                            self.reflect().call(methodName, *args)
+                            self.reflect().call(callable.name, *args)
                         }
                         1 -> receive1(callable, asyncCallContext, args[0]) {
-                            self.reflect().call(methodName, *args)
+                            self.reflect().call(callable.name, *args)
                         }
                         2 -> receive2(callable, asyncCallContext, args[0], args[1]) {
-                            self.reflect().call(methodName, *args)
+                            self.reflect().call(callable.name, *args)
                         }
                         3 -> receive3(callable, asyncCallContext, args[0], args[1], args[2]) {
-                            self.reflect().call(methodName, *args)
+                            self.reflect().call(callable.name, *args)
                         }
                         4 -> receive4(callable, asyncCallContext, args[0], args[1], args[2], args[3]) {
-                            self.reflect().call(methodName, *args)
+                            self.reflect().call(callable.name, *args)
                         }
                         else -> TODO()
                     }

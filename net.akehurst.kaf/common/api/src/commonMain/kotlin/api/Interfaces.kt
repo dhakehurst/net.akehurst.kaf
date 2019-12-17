@@ -37,7 +37,7 @@ interface ApplicationFrameworkService : Service {
     fun callOn(obj:Any, callableName:String) : Any
 
 //    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, args: Array<out Any>) -> Any?): T
-    fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, callableName:String, args: Array<out Any>) -> Any?): T
+    //fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler: Any, proxy: Any?, callable: KCallable<*>, callableName:String, args: Array<out Any>) -> Any?): T
     /**
      * request application shutdown
      * all currently queued tasks should be finished

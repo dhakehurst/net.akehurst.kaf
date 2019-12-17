@@ -47,7 +47,7 @@ class test_PersystentStoreNeo4j : Application {
         defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
         defineService(ConfigurationService::class) {
             ConfigurationMap(mutableMapOf(
-                    "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
+                    "test.sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
             ))
         }
     }
@@ -75,7 +75,7 @@ class test_PersystentStoreNeo4j : Application {
                 "uri" to "bolt://localhost:7777",
                 "user" to "neo4j",
                 "password" to "neo4j",
-                "komposite" to KOMPOSITE
+                "komposite" to listOf(KOMPOSITE)
         ))
     }
 
@@ -84,7 +84,7 @@ class test_PersystentStoreNeo4j : Application {
         this.configure()
 
         val a = A("a")
-        sut.create(A::class, a)
+        sut.create(A::class, a) { identity }
     }
 
     @Test
@@ -96,7 +96,7 @@ class test_PersystentStoreNeo4j : Application {
         val a3 = A("a3")
         val a4 = A("a4")
         val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        sut.createAll(A::class, setOfA) { identity }
     }
 
     @Test
@@ -104,7 +104,7 @@ class test_PersystentStoreNeo4j : Application {
         // given
         this.configure()
         val a = A("a")
-        sut.create(A::class, a)
+        sut.create(A::class, a) { identity }
 
         // when
         val actual = sut.read(A::class, "a")
@@ -125,13 +125,13 @@ class test_PersystentStoreNeo4j : Application {
         val a3 = A("a3")
         val a4 = A("a4")
         val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        sut.createAll(A::class, setOfA) { identity }
 
         // when
         val actual = sut.readAllIdentity(A::class)
 
         // then
-        val expected = setOf("a1","a2","a3","a4")
+        val expected = setOf("a1", "a2", "a3", "a4")
         assertNotNull(actual)
         assertEquals(expected, actual)
     }
@@ -146,7 +146,7 @@ class test_PersystentStoreNeo4j : Application {
         val a3 = A("a3")
         val a4 = A("a4")
         val setOfA = setOf(a1, a2, a3, a4)
-        sut.createAll(A::class, setOfA)
+        sut.createAll(A::class, setOfA) { identity }
 
         // when
         val actual = sut.readAll(A::class, setOf("a1", "a2", "a3", "a4"))

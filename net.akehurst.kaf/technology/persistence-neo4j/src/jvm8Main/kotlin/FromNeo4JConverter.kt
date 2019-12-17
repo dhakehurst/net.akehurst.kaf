@@ -18,20 +18,19 @@ package net.akehurst.kaf.technology.persistence.neo4j
 
 import com.soywiz.klock.DateTime
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
-import net.akehurst.kotlin.komposite.api.CollectionType
-import net.akehurst.kotlin.komposite.api.Datatype
-import net.akehurst.kotlin.komposite.api.TypeDeclaration
-import net.akehurst.kotlin.komposite.api.TypeInstance
+import net.akehurst.kotlin.komposite.api.*
+import net.akehurst.kotlin.komposite.common.DatatypeRegistry
 import net.akehurst.kotlin.komposite.common.construct
 import net.akehurst.kotlin.komposite.common.set
 import net.akehurst.kotlin.komposite.processor.TypeInstanceSimple
-import org.neo4j.driver.v1.Value
-import org.neo4j.driver.v1.types.Node
-import org.neo4j.driver.v1.types.TypeSystem
+import org.neo4j.driver.Value
+import org.neo4j.driver.types.Node
+import org.neo4j.driver.types.TypeSystem
 
 class FromNeo4JConverter(
         val reader: Neo4JReader,
-        val ts: TypeSystem
+        val ts: TypeSystem,
+        val registry: DatatypeRegistry
 ) {
     var pathMap = mutableMapOf<String, Value>()
 
@@ -145,9 +144,19 @@ class FromNeo4JConverter(
     }
 
     fun convertValue(type: TypeInstance, neo4jValue: Value): Any? {
-        return when (neo4jValue.type()) {
+        return  when (neo4jValue.type()) {
             ts.NULL() -> null
-            ts.STRING() -> neo4jValue.asString()
+            ts.STRING() -> {
+                val typeValue = neo4jValue.asString().split("|")
+                val primitiveTypeName = typeValue[0]
+                val raw = typeValue[1]
+                if (CypherStatement.RAW_VALUE==primitiveTypeName) {
+                    raw
+                } else {
+                    val mapper = this.registry.findPrimitiveMapperFor(primitiveTypeName) as PrimitiveMapper<Any, String>
+                    mapper.toPrimitive(raw)
+                }
+            }
             ts.INTEGER() -> neo4jValue.asInt()
             ts.BOOLEAN() -> neo4jValue.asBoolean()
             ts.LIST() -> neo4jValue.asList()

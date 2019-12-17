@@ -18,8 +18,6 @@ package net.akehurst.kaf.technology.persistence.neo4j
 
 import com.soywiz.klock.DateTime
 import net.akehurst.kaf.common.api.Component
-import net.akehurst.kaf.common.api.Identifiable
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
@@ -30,9 +28,9 @@ import net.akehurst.kotlin.komposite.common.DatatypeRegistry
 import net.akehurst.kotlin.komposite.common.WalkInfo
 import net.akehurst.kotlin.komposite.common.kompositeWalker
 import net.akehurst.kotlinx.collections.Stack
-import org.neo4j.driver.v1.AuthTokens
-import org.neo4j.driver.v1.Driver
-import org.neo4j.driver.v1.GraphDatabase
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
 import org.neo4j.kernel.configuration.BoltConnector
@@ -47,7 +45,6 @@ import kotlin.collections.all
 import kotlin.collections.dropLast
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
-import kotlin.collections.emptySet
 import kotlin.collections.flatMap
 import kotlin.collections.forEach
 import kotlin.collections.joinToString
@@ -77,33 +74,34 @@ class PersistentStoreNeo4j(
     private lateinit var _neo4j: Driver
     private lateinit var _neo4JReader: Neo4JReader
 
-    private val neo4JReader: Neo4JReader get() {
-        try {
-            return this._neo4JReader
-        } catch (t:Throwable) {
-            throw PersistenceException("problem accessing neo4J database, perhaps configure has not been called with valid settings")
+    private val neo4JReader: Neo4JReader
+        get() {
+            try {
+                return this._neo4JReader
+            } catch (t: Throwable) {
+                throw PersistenceException("problem accessing neo4J database, perhaps configure has not been called with valid settings")
+            }
         }
-    }
 
-    private fun <T : Identifiable> createCypherMergeStatements(rootItem: T): List<CypherStatement> {
-        val rootIdentity = rootItem.identity
+    private fun <T : Any> createCypherMergeStatements(rootItem: T, identity: T.() -> String): List<CypherStatement> {
+        val rootIdentity = rootItem.identity()
         val rootPath = listOf(rootIdentity)
         var currentObjStack = Stack<Any>()
         val walker = kompositeWalker<List<String>, List<CypherStatement>>(this._registry) {
             nullValue { path, info ->
                 af.log.debug { "walk: nullValue: $path = null" }
-                currentObjStack.push(CypherValue(null))
+                currentObjStack.push(CypherValue(null, null))
                 WalkInfo(path, info.acc)
             }
             primitive { path, info, primitive, mapper ->
                 af.log.debug { "walk: primitive: $path, $info" }
                 val cypherValue = if (null == mapper) {
-                    CypherValue(primitive)
+                    CypherValue(primitive, null)
                 } else {
                     val cy = (mapper as PrimitiveMapper<Any, Any>?)?.toRaw?.invoke(primitive)
                             ?: throw PersistenceException("Do not know how to convert ${primitive::class} to json, did you register its converter")
                     val raw = mapper.toRaw(primitive)
-                    CypherValue(raw)
+                    CypherValue(raw, mapper.primitiveKlass.simpleName) //TODO: use qualified name from datatype
                 }
                 currentObjStack.push(cypherValue)
                 WalkInfo(info.up, info.acc)
@@ -213,7 +211,7 @@ class PersistentStoreNeo4j(
             objectBegin { path, info, obj, datatype ->
                 af.log.debug { "walk: objectBegin: $path, $info" }
                 val objId = (rootPath + path).joinToString("/", "/")
-                val additionalLabels = datatype.superTypes.map {
+                val additionalLabels = datatype.allSuperTypes.map {
                     it.type.declaration.qualifiedName(".")
                 }
                 val objLabel = datatype.qualifiedName(".")
@@ -379,58 +377,97 @@ class PersistentStoreNeo4j(
         this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, defaultPrimitiveMappers)
     }
 
-    override fun <T : Identifiable> create(type: KClass<T>, item: T) {
-        af.log.trace { "create(${type.simpleName}, ...)" }
-        val cypherStatements = this.createCypherMergeStatements(item)
-        this.executeWriteCypher(cypherStatements)
-    }
-
-    override fun <T : Identifiable> createAll(type: KClass<T>, itemSet: Set<T>) {
-        af.log.trace { "createAll(${type.simpleName}, ...)" }
-        val cypherStatements = itemSet.flatMap { item ->
-            this.createCypherMergeStatements(item)
+    override fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String) {
+        try {
+            af.log.trace { "create(${type.simpleName}, ...)" }
+            val cypherStatements = this.createCypherMergeStatements(item, identity)
+            this.executeWriteCypher(cypherStatements)
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
         }
-        this.executeWriteCypher(cypherStatements)
     }
 
-    override fun <T : Identifiable> read(type: KClass<T>, identity: Any): T {
-        af.log.trace { "read(${type.simpleName}, $identity)" }
-        val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.session().typeSystem())
-        val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val item = fromNeo4JConverter.convertRootObject(dt, identity)
-        return item as T
+    override fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity: T.() -> String) {
+        try {
+            af.log.trace { "createAll(${type.simpleName}, ...)" }
+            val cypherStatements = itemSet.flatMap { item ->
+                this.createCypherMergeStatements(item, identity)
+            }
+            this.executeWriteCypher(cypherStatements)
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String> {
-        val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.session().typeSystem())
-        val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-        val allIds = fromNeo4JConverter.fetchAllIds(dt)
-        return allIds
+    override fun <T : Any> read(type: KClass<T>, identity: Any): T {
+        try {
+            af.log.trace { "read(${type.simpleName}, $identity)" }
+            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.defaultTypeSystem(), this._registry)
+            val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
+            val item = fromNeo4JConverter.convertRootObject(dt, identity)
+            return item as T
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
-        af.log.trace { "readAll(${type.simpleName}, $identities)" }
-        val itemSet = identities.map {
-            read(type, it)
-        }.toSet()
-        return itemSet
-
+    override fun <T : Any> readAllIdentity(type: KClass<T>): Set<String> {
+        try {
+            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.defaultTypeSystem(), _registry)
+            val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
+            val allIds = fromNeo4JConverter.fetchAllIds(dt)
+            return allIds
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> update(type: KClass<T>, item: T) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
+        try {
+            af.log.trace { "readAll(${type.simpleName}, $identities)" }
+            val itemSet = identities.map {
+                read(type, it)
+            }.toSet()
+            return itemSet
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> updateAll(type: KClass<T>, itemSet: Set<T>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun <T : Any> update(type: KClass<T>, item: T) {
+        try {
+            af.log.trace { "update(${type.simpleName}, $item)" }
+            TODO()
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> delete(identity: Any) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun <T : Any> updateAll(type: KClass<T>, itemSet: Set<T>) {
+        try {
+            af.log.trace { "updateAll(${type.simpleName}, $itemSet)" }
+            TODO()
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
-    override fun <T : Identifiable> deleteAll(identitySet: Set<Any>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun <T : Any> delete(identity: Any) {
+        try {
+            af.log.trace { "delete($identity)" }
+            TODO()
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
+    }
+
+    override fun <T : Any> deleteAll(identitySet: Set<Any>) {
+        try {
+            af.log.trace { "deleteAll($identitySet)" }
+            TODO()
+        } catch (t: Throwable) {
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+        }
     }
 
 

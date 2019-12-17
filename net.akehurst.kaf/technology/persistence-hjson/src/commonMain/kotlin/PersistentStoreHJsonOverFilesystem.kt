@@ -43,7 +43,7 @@ class PersistentStoreHJsonOverFilesystem(
     private val serialiser = KSerialiserHJson()
 
     @ExperimentalStdlibApi
-    private fun buildHJson(rootItem: Identifiable): ByteArray {
+    private fun buildHJson(rootItem: Any): ByteArray {
         val doc = this.serialiser.toHJson(rootItem, rootItem)
         val bytes = doc.toHJsonString().encodeToByteArray()
         return bytes
@@ -89,21 +89,21 @@ class PersistentStoreHJsonOverFilesystem(
     }
 
     @ExperimentalStdlibApi
-    override fun <T : Identifiable> create(type: KClass<T>, item: T) {
-        val uri = calcUri(item.identity.toString())
+    override fun <T : Any> create(type: KClass<T>, item: T, identity:T.()->String) {
+        val uri = calcUri(item.identity())
         val bytes = buildHJson(item)
         this.fs.write(uri, bytes)
     }
 
     @ExperimentalStdlibApi
-    override fun <T : Identifiable> createAll(type: KClass<T>, itemSet: Set<T>) {
+    override fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity:T.()->String) {
         itemSet.forEach {
-            this.create(type, it)
+            this.create(type, it, identity)
         }
     }
 
     @ExperimentalStdlibApi
-    override fun <T : Identifiable> read(type: KClass<T>, identity: Any): T {
+    override fun <T : Any> read(type: KClass<T>, identity: Any): T {
         val uri = calcUri(identity.toString())
         val bytes = fs.read(uri)
         val hjsonStr = bytes.decodeToString()
@@ -111,31 +111,31 @@ class PersistentStoreHJsonOverFilesystem(
         return item
     }
 
-    override fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String> {
+    override fun <T : Any> readAllIdentity(type: KClass<T>): Set<String> {
         TODO("not implemented")
     }
 
     @ExperimentalStdlibApi
-    override fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
+    override fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
         val result = identities.map {
             this.read(type, it)
         }.toSet()
         return result
     }
 
-    override fun <T : Identifiable> update(type: KClass<T>, item: T) {
+    override fun <T : Any> update(type: KClass<T>, item: T) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Identifiable> updateAll(type: KClass<T>, itemSet: Set<T>) {
+    override fun <T : Any> updateAll(type: KClass<T>, itemSet: Set<T>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Identifiable> delete(identity: Any) {
+    override fun <T : Any> delete(identity: Any) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Identifiable> deleteAll(identitySet: Set<Any>) {
+    override fun <T : Any> deleteAll(identitySet: Set<Any>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

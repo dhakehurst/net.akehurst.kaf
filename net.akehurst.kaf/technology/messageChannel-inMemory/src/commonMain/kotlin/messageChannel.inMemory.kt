@@ -32,11 +32,11 @@ import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KClass
 
 class component_MessageChannelInMemory<T : Any>(
-        val constructEndPointId: (String) -> T
+        val constructEndPointId: (String) -> T = { it as T }
 ) : Component {
 
-    lateinit var port_endPoint1:Port
-    lateinit var port_endPoint2:Port
+    lateinit var port_endPoint1: Port
+    lateinit var port_endPoint2: Port
 
     val endPoint1 = MessageChannelInMemoryEndPoint<T>(constructEndPointId)
     val endPoint2 = MessageChannelInMemoryEndPoint<T>(constructEndPointId)
@@ -76,6 +76,7 @@ class MessageChannelInMemoryEndPoint<T : Any>(
                     val channelIdMessage = frame.substringAfter(MessageChannel.DELIMITER)
                     val channelId = ChannelIdentity(channelIdMessage.substringBefore(MessageChannel.DELIMITER))
                     val message = channelIdMessage.substringAfter(MessageChannel.DELIMITER)
+                    self.af.log.trace { "invoking action for ${channelId.value} with $endPointId, $message" }
                     receiveActions[channelId]?.invoke(endPointId, message)
                 }
             }
@@ -90,11 +91,13 @@ class MessageChannelInMemoryEndPoint<T : Any>(
     }
 
     override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: T, message: String) -> Unit) {
+        af.log.trace { "registering to receive ${channelId.value}" }
         this.receiveActions[channelId] = action
     }
 
     override fun send(endPointId: T, channelId: ChannelIdentity, message: String) {
-        val frame = "$endPointId${MessageChannel.DELIMITER}$channelId${MessageChannel.DELIMITER}$message"
+        val frame = "$endPointId${MessageChannel.DELIMITER}${channelId.value}${MessageChannel.DELIMITER}$message"
+        af.log.trace { "sending $frame" }
         GlobalScope.launch {
             outgoing.send(frame)
         }

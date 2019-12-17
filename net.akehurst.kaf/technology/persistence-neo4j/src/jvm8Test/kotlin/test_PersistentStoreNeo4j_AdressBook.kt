@@ -70,7 +70,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
         defineService(ConfigurationService::class) {
             ConfigurationMap(mutableMapOf(
-                    "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
+                    "test.sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
             ))
         }
         initialise = {}
@@ -102,7 +102,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 //                "uri" to "bolt://localhost:7687",
                 "user" to "neo4j",
                 "password" to "admin",
-                "komposite" to KOMPOSITE,
+                "komposite" to listOf(KOMPOSITE),
                 "primitiveMappers" to primitiveMappers
         ))
     }
@@ -114,7 +114,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val c = Contact("adam")
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -129,7 +129,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -145,7 +145,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         c.emails = mutableListOf("adam@pop.com", "adam.ant@pop.com")
 
         //when
-        sut.create(Contact::class, c)
+        sut.create(Contact::class, c) { alias }
 
         //then
         //TODO
@@ -156,7 +156,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         this.configure()
 
         val abk = AddressBook("friends")
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
     }
 
     @Test
@@ -167,7 +167,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val c1 = Contact("adam")
         abk.contacts.put(c1.alias, c1)
 
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
     }
 
     @Test
@@ -175,7 +175,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         // given
         this.configure()
         val abk = AddressBook("friends")
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")
@@ -202,7 +202,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         c1.phone.add(PhoneNumber("home", "12432523523"))
         c1.phone.add(PhoneNumber("work", "09876543123"))
         abk.contacts.put(c1.alias, c1)
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")
@@ -230,7 +230,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         abk.contacts.put(c1.alias, c1)
         val c2 = Contact("brian")
         abk.contacts.put(c2.alias, c2)
-        sut.create(AddressBook::class, abk)
+        sut.create(AddressBook::class, abk) { title }
 
         // when
         val actual = sut.read(AddressBook::class, "friends")

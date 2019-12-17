@@ -4,6 +4,7 @@ val version_kotlinx:String by project
 val version_korio: String by project
 val version_agl: String by project
 val version_klock: String by project
+val version_coroutines: String by project
 
 dependencies {
 
@@ -15,7 +16,18 @@ dependencies {
     commonMainImplementation("net.akehurst.kotlinx:kotlinx-reflect:$version_kotlinx")
 
     commonMainImplementation("com.soywiz.korlibs.korio:korio:$version_korio")
-
+    commonMainImplementation("com.soywiz.korlibs.klock:klock:$version_klock") {
+        isForce = true
+    }
+    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$version_coroutines") {
+        isForce=true
+    }
+    jvm8MainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
+        isForce=true
+    }
+    jsMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$version_coroutines") {
+        isForce=true
+    }
 
     commonTestImplementation(project(":kaf-service-logging-console"))
     commonTestImplementation(project(":kaf-service-configuration-map"))

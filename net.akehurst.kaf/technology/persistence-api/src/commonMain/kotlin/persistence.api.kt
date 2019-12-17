@@ -28,15 +28,15 @@ interface PersistentStore {
 
     fun configure(settings: Map<String, Any>)
 
-    fun <T : Identifiable> create(type: KClass<T>, item: T)
-    fun <T : Identifiable> createAll(type: KClass<T>, itemSet: Set<T>)
-    fun <T : Identifiable> read(type: KClass<T>, identity: Any): T
-    fun <T : Identifiable> readAllIdentity(type: KClass<T>): Set<String>
-    fun <T : Identifiable> readAll(type: KClass<T>, identities: Set<Any>): Set<T>
-    fun <T : Identifiable> update(type: KClass<T>, item: T)
-    fun <T : Identifiable> updateAll(type: KClass<T>, itemSet: Set<T>)
-    fun <T : Identifiable> delete(identity: Any)
-    fun <T : Identifiable> deleteAll(identitySet: Set<Any>)
+    fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String)
+    fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity: T.() -> String)
+    fun <T : Any> read(type: KClass<T>, identity: Any): T
+    fun <T : Any> readAllIdentity(type: KClass<T>): Set<String>
+    fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T>
+    fun <T : Any> update(type: KClass<T>, item: T)
+    fun <T : Any> updateAll(type: KClass<T>, itemSet: Set<T>)
+    fun <T : Any> delete(identity: Any)
+    fun <T : Any> deleteAll(identitySet: Set<Any>)
 
 }
 

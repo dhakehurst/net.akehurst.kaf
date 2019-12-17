@@ -13,10 +13,6 @@ actual fun <T> runBlocking(context: CoroutineContext,block:suspend () -> T): T {
 
 actual class ApplicationFrameworkServiceDefault() : ApplicationFrameworkService {
 
-    actual override fun <T : Any> proxy(forInterface: KClass<*>, invokeMethod: (handler:Any, proxy: Any?, callable: KCallable<*>, methodName:String, args: Array<out Any>) -> Any?): T {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     actual override fun makeAccessible(callable: KCallable<*>) {
         //all are accessible on JS
     }

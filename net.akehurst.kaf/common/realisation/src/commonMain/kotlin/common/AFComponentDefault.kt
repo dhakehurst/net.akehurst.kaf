@@ -19,6 +19,7 @@ package net.akehurst.kaf.common.realisation
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kotlinx.collections.MapNonNull
 import net.akehurst.kotlinx.collections.mutableMapNonNullOf
+import net.akehurst.kotlinx.reflect.proxyFor
 import net.akehurst.kotlinx.reflect.reflect
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
@@ -137,9 +138,9 @@ open class AFComponentDefault(
     }
 
     override fun <T : Any> receiver(forInterface: KClass<T>): T {
-        return super.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
+        return proxyFor(forInterface) { handler, proxy, callable, methodName, args ->
             when {
-                forInterface.isInstance(self) -> self.reflect().call(methodName, *args)
+                forInterface.isInstance(self) -> self.reflect().call(callable.name, *args)
                 else -> throw ActiveException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
             }
         }
@@ -179,14 +180,14 @@ class PortDefault(
     lateinit var componentAF: AFComponent
 
     private fun <T : Any> outProxy(forInterface: KClass<T>): T {
-        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
+        return proxyFor(forInterface) { handler, proxy, callable, methodName, args ->
             //TODO: really want directMembers of forInterface only
             when {
                 Any::equals == callable -> handler.reflect().call(methodName, *args)
                 Any::hashCode == callable -> handler.reflect().call(methodName, *args)
                 Any::toString == callable -> "outProxy for $this"
                 else -> {
-                    componentAF.log.trace { "calling $methodName" }
+                    componentAF.log.trace { "calling $methodName on ${this}" }
                     var result: Any? = null
                     this.allRequired(forInterface).forEach {
                         if (it is Active) {
@@ -208,14 +209,14 @@ class PortDefault(
     }
 
     private fun <T : Any> inProxy(forInterface: KClass<T>): T {
-        return this.componentAF.framework.proxy(forInterface) { handler, proxy, callable, methodName, args ->
+        return proxyFor(forInterface) { handler, proxy, callable, methodName, args ->
             //TODO: really want directMembers of forInterface only
             when {
                 Any::equals == callable -> handler.reflect().call(methodName, *args)
                 Any::hashCode == callable -> handler.reflect().call(methodName, *args)
                 Any::toString == callable -> "inProxy for $this"
                 else -> {
-                    componentAF.log.trace { "calling ${methodName}" }
+                    componentAF.log.trace { "calling ${methodName} on ${this}" }
                     var result: Any? = null
                     this.allProvided(forInterface).forEach {
                         if (it is Active) {

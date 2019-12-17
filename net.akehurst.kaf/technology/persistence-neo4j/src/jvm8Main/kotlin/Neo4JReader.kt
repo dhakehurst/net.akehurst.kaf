@@ -16,12 +16,11 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.common.realisation.afPassive
-import org.neo4j.driver.v1.Driver
-import org.neo4j.driver.v1.Record
-import org.neo4j.driver.v1.Value
+import org.neo4j.driver.Driver
+import org.neo4j.driver.Record
+import org.neo4j.driver.Value
 
 class Neo4JReader(
         val neo4j: Driver

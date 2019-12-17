@@ -16,7 +16,6 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import com.soywiz.klock.DateTime
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import java.time.ZonedDateTime
 
@@ -40,6 +39,7 @@ interface CypherStatement {
 
         val ENTRY_PATH_SEGMENT = "#entry"
         val ELEMENT_PATH_SEGMENT = "#element"
+        val RAW_VALUE = "#RAW"
     }
 
     fun toCypherStatement(): String
@@ -51,29 +51,38 @@ interface CypherElement : CypherStatement {
 }
 
 data class CypherValue(
-        val value: Any?
+        val value: Any?,
+        val primitiveTypeName:String? = null
 ) {
     fun toCypherString(): String {
-        return when {
-            null == value -> "NULL"
-            value is String -> "'$value'"
-            value is Boolean -> "$value"
-            value is Int -> "$value"
-            value is Long -> "$value"
-            value is Float -> "$value"
-            value is Double -> "$value"
-            value is List<*> -> {
-                val elements = value.map {
-                    if (it is CypherValue) {
-                        it.toCypherString()
-                    } else {
-                        CypherValue(it).toCypherString()
-                    }
-                }.joinToString(",")
-                "[$elements]"
+        return if (null==primitiveTypeName) {
+            when {
+                null == value -> "NULL"
+                value is String -> "'${CypherStatement.RAW_VALUE}|$value'"
+                value is Boolean -> "$value"
+                value is Int -> "$value"
+                value is Long -> "$value"
+                value is Float -> "$value"
+                value is Double -> "$value"
+                value is List<*> -> {
+                    val elements = value.map {
+                        if (it is CypherValue) {
+                            it.toCypherString()
+                        } else {
+                            CypherValue(it).toCypherString()
+                        }
+                    }.joinToString(",")
+                    "[$elements]"
+                }
+                value is ZonedDateTime -> "datetime('${value}')"
+                else -> throw PersistenceException("CypherValue of type ${value::class.simpleName} is not yet supported")
             }
-            value is ZonedDateTime -> "datetime('${value}')"
-            else -> throw PersistenceException("CypherValue of type ${value::class.simpleName} is not yet supported")
+        } else {
+            when {
+                null == value -> "NULL"
+                value is String -> "'$primitiveTypeName|$value'"
+                else -> throw PersistenceException("CypherValue for $primitiveTypeName of type ${value::class.simpleName} is not yet supported")
+            }
         }
     }
 }
@@ -207,12 +216,12 @@ data class CypherObject(
     val properties = mutableListOf<CypherProperty>()
 
     override fun toCypherStatement(): String {
-        val labelList = (listOf(label)+additionalLabels).joinToString(":")
+        val labelList = (listOf(label)+additionalLabels).map { "`$it`" }.joinToString(":")
         val propertyStr = this.properties.filter { null != it.value.value }.map { it.toCypherString() }.joinToString(", ")
         return if (propertyStr.isEmpty()) {
-            "MERGE (:`$labelList`{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
+            "MERGE (:$labelList{`${CypherStatement.PATH_PROPERTY}`:'$path'})"
         } else {
-            "MERGE (:`$labelList`{`${CypherStatement.PATH_PROPERTY}`:'$path', $propertyStr})"
+            "MERGE (:$labelList{`${CypherStatement.PATH_PROPERTY}`:'$path', $propertyStr})"
         }
     }
 }
