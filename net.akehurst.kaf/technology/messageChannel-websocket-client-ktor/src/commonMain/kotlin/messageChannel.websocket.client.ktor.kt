@@ -90,7 +90,12 @@ class MessageChannelWebsocketKtor<T : Any>(
                         val message = text.substringAfter(MessageChannel.DELIMITER)
                         println( "Message ${channelId.value}: $message" )
                         if (this.receiveActions.containsKey(channelId)) {
-                            this.receiveActions[channelId]?.invoke(session, message)
+                            try {
+                                this.receiveActions[channelId]?.invoke(session, message)
+                            } catch (t:Throwable) {
+                                //af.log.error(t) { "Error invoking action $channelId" }
+                                println( "Error invoking action $channelId: $t")
+                            }
                         } else {
                             //af.log.error { "Websocket Connection message from $session, $frame" }
                             println { "No action registered for $channelId" }

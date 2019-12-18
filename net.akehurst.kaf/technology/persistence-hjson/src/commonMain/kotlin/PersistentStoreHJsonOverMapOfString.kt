@@ -95,8 +95,8 @@ class PersistentStoreHJsonOverMapOfString(
         }
     }
 
-    override fun <T : Any> read(type: KClass<T>, identity: Any): T {
-        val id = Index(type, identity.toString())
+    override fun <T : Any> read(type: KClass<T>, identity: String): T {
+        val id = Index(type, identity)
         val hjsonStr = this.map[id] ?: throw PersistenceException("Item of type ${type.simpleName} not found with identity $identity")
         val item = this.serialiser.toData<T>(hjsonStr)
         return item
@@ -106,14 +106,14 @@ class PersistentStoreHJsonOverMapOfString(
         return this.map.keys.filter { it.kClass==type }.map { it.identity }.toSet()
     }
 
-    override fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
+    override fun <T : Any> readAll(type: KClass<T>, identities: Set<String>): Set<T> {
         val result = identities.map {
             this.read(type, it)
         }.toSet()
         return result
     }
 
-    override fun <T : Any> update(type: KClass<T>, item: T) {
+    override fun <T : Any> update(type: KClass<T>, item: T, oldIdentity:String, newIdentity:T.()->String) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -121,11 +121,11 @@ class PersistentStoreHJsonOverMapOfString(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> delete(identity: Any) {
+    override fun <T : Any> delete(type: KClass<T>,identity: String) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> deleteAll(identitySet: Set<Any>) {
+    override fun <T : Any> deleteAll(type: KClass<T>,identitySet: Set<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

@@ -34,13 +34,13 @@ class FromNeo4JConverter(
 ) {
     var pathMap = mutableMapOf<String, Value>()
 
-    private fun createCypherMatchRootObject(datatype: Datatype, identity: Any): List<CypherStatement> {
+    private fun createCypherMatchRootObject(datatype: Datatype, identity: String): List<CypherStatement> {
         val rootLabel = datatype.qualifiedName(".")
-        val rootNodeName = "/" + identity.toString()
+        val rootNodeName = "/" + identity
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNodeByTypeAndPath(rootLabel, rootNodeName)
 
-        val composite = datatype.property.values.filter {
+        val composite = datatype.allExplicitProperty.values.filter {
             it.propertyType.declaration.isPrimitive.not()
         }.flatMap {
             val ppath = rootNodeName + "/${it.name}"
@@ -84,8 +84,8 @@ class FromNeo4JConverter(
 
     private fun createMatchMap(path: String): List<CypherStatement> {
         val map = CypherMatchMap(path)
-        //val entries = CypherMatchNode(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/${CypherStatement.ENTRY_PATH_SEGMENT}")
-        return listOf(map)// + entries
+        val entries = CypherMatchNodeByTypeAndPath(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/${CypherStatement.ENTRY_PATH_SEGMENT}")
+        return listOf(map) + entries
     }
 
     private fun createCypherMatchObject(typeDeclaration: TypeDeclaration, objPathName: String): List<CypherStatement> {
@@ -124,7 +124,7 @@ class FromNeo4JConverter(
         val rootLabel = datatype.qualifiedName(".")
         val key = "n"
         val cypherStatements = listOf(
-                CypherMatchNodeByType(rootLabel, key)
+                CypherMatchAllNodeByType(rootLabel, key)
         )
         val records = reader.executeReadCypher(cypherStatements)
         val ids = records.map { rec ->
@@ -133,7 +133,7 @@ class FromNeo4JConverter(
         return ids
     }
 
-    fun convertRootObject(datatype: Datatype, identity: Any): Any {
+    fun convertRootObject(datatype: Datatype, identity: String): Any {
         val cypherStatements = this.createCypherMatchRootObject(datatype, identity)
         val records = reader.executeReadCypher(cypherStatements)
         this.pathMap = reader.recordsToPathMap(records)

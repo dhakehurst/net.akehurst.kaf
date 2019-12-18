@@ -30,13 +30,13 @@ interface PersistentStore {
 
     fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String)
     fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity: T.() -> String)
-    fun <T : Any> read(type: KClass<T>, identity: Any): T
+    fun <T : Any> read(type: KClass<T>, identity: String): T
     fun <T : Any> readAllIdentity(type: KClass<T>): Set<String>
-    fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T>
-    fun <T : Any> update(type: KClass<T>, item: T)
+    fun <T : Any> readAll(type: KClass<T>, identities: Set<String>): Set<T>
+    fun <T : Any> update(type: KClass<T>, item: T, oldIdentity:String, newIdentity:T.()->String)
     fun <T : Any> updateAll(type: KClass<T>, itemSet: Set<T>)
-    fun <T : Any> delete(identity: Any)
-    fun <T : Any> deleteAll(identitySet: Set<Any>)
+    fun <T : Any> delete(type: KClass<T>,identity: String)
+    fun <T : Any> deleteAll(type: KClass<T>,identitySet: Set<String>)
 
 }
 

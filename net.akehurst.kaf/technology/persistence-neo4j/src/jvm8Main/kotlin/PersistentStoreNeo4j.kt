@@ -395,11 +395,11 @@ class PersistentStoreNeo4j(
             }
             this.executeWriteCypher(cypherStatements)
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.createAll: ${t.message}")
         }
     }
 
-    override fun <T : Any> read(type: KClass<T>, identity: Any): T {
+    override fun <T : Any> read(type: KClass<T>, identity: String): T {
         try {
             af.log.trace { "read(${type.simpleName}, $identity)" }
             val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.defaultTypeSystem(), this._registry)
@@ -407,7 +407,7 @@ class PersistentStoreNeo4j(
             val item = fromNeo4JConverter.convertRootObject(dt, identity)
             return item as T
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.read: ${t.message}")
         }
     }
 
@@ -418,11 +418,11 @@ class PersistentStoreNeo4j(
             val allIds = fromNeo4JConverter.fetchAllIds(dt)
             return allIds
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.readAllIdentity: ${t.message}")
         }
     }
 
-    override fun <T : Any> readAll(type: KClass<T>, identities: Set<Any>): Set<T> {
+    override fun <T : Any> readAll(type: KClass<T>, identities: Set<String>): Set<T> {
         try {
             af.log.trace { "readAll(${type.simpleName}, $identities)" }
             val itemSet = identities.map {
@@ -430,16 +430,17 @@ class PersistentStoreNeo4j(
             }.toSet()
             return itemSet
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.readAll: ${t.message}")
         }
     }
 
-    override fun <T : Any> update(type: KClass<T>, item: T) {
+    override fun <T : Any> update(type: KClass<T>, item: T, oldIdentity: String, newIdentity: T.() -> String) {
         try {
             af.log.trace { "update(${type.simpleName}, $item)" }
-            TODO()
+            this.delete<T>(type, oldIdentity)
+            this.create(type, item, newIdentity)
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.update: ${t.message}")
         }
     }
 
@@ -448,25 +449,28 @@ class PersistentStoreNeo4j(
             af.log.trace { "updateAll(${type.simpleName}, $itemSet)" }
             TODO()
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.updateAll: ${t.message}")
         }
     }
 
-    override fun <T : Any> delete(identity: Any) {
+    override fun <T : Any> delete(type: KClass<T>, identity: String) {
         try {
             af.log.trace { "delete($identity)" }
-            TODO()
+            val label = this._registry.findDatatypeByClass(type)!!.qualifiedName(".")
+            val path = "/$identity"
+            val cypherStatements = listOf(CypherDeleteRecursive(label, path))
+            this.executeWriteCypher(cypherStatements)
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.delete: ${t.message}")
         }
     }
 
-    override fun <T : Any> deleteAll(identitySet: Set<Any>) {
+    override fun <T : Any> deleteAll(type: KClass<T>, identitySet: Set<String>) {
         try {
             af.log.trace { "deleteAll($identitySet)" }
             TODO()
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.deleteAll: ${t.message}")
         }
     }
 

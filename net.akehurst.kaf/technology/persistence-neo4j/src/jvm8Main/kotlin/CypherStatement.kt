@@ -226,7 +226,7 @@ data class CypherObject(
     }
 }
 
-data class CypherMatchNodeByType(
+data class CypherMatchAllNodeByType(
         val label: String,
         val key:String
 ) : CypherStatement {
@@ -304,5 +304,18 @@ data class CypherMatchLink(
 
     override fun toString(): String {
         return this.toCypherStatement()
+    }
+}
+
+data class CypherDeleteRecursive(
+        val label: String,
+        val path: String
+) : CypherStatement {
+    override fun toCypherStatement(): String {
+        return "match (`$path`:`$label`{`${CypherStatement.PATH_PROPERTY}`:'$path'})-[r*0..]->(m) detach delete `$path`,m"
+    }
+
+    override fun toString(): String {
+        return super.toString()
     }
 }
