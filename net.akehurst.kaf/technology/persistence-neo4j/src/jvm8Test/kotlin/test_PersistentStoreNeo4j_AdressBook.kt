@@ -18,6 +18,7 @@ package net.akehurst.kaf.technology.persistence.neo4j
 
 import com.soywiz.klock.DateTime
 import com.soywiz.klock.Month
+import com.soywiz.klock.TimeSpan
 import com.soywiz.klock.Year
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
@@ -42,6 +43,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
                 primitive TimeSpan
             }
             namespace net.akehurst.kaf.technology.persistence.neo4j {
+                primitive PhoneNumber
                 datatype AddressBook {
                   val  title : String
                   car  contacts : Map<String, Contact>
@@ -49,15 +51,15 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
                 datatype Contact {
                   val  alias : String
                   var  name : String
-                  var  emails : List<String>
-                  car  phone : Set<PhoneNumber>
+                  car  emails : List<String>
+                  car  phone : Set<LabelledPhoneNumber>
                   var  dateOfBirth : DateTime
                   dis  age : TimeSpan
                   var  friendsWith : Set<Contact>
                 }
-                datatype PhoneNumber {
+                datatype LabelledPhoneNumber {
                   val label: String
-                  val number: String
+                  val number: PhoneNumber
                 }
             }
         """.trimIndent()
@@ -94,17 +96,28 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 
     @Test
     fun configure() {
-        val primitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*,*>>()
+        val primitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>(
+                PhoneNumber::class to PrimitiveMapper.create(PhoneNumber::class, String::class, { it.value }, { PhoneNumber(it) })
+        )
         this.sut.configure(mapOf(
                 "embedded" to true,
                 "uri" to "bolt://localhost:7777",
-//                "embedded" to false,
-//                "uri" to "bolt://localhost:7687",
                 "user" to "neo4j",
                 "password" to "admin",
                 "komposite" to listOf(KOMPOSITE),
                 "primitiveMappers" to primitiveMappers
         ))
+
+/*
+        this.sut.configure(mapOf(
+                "embedded" to false,
+                "uri" to "bolt://localhost:7687",
+                "user" to "neo4j",
+                "password" to "admin",
+                "komposite" to listOf(KOMPOSITE),
+                "primitiveMappers" to primitiveMappers
+        ))
+ */
     }
 
     @Test
@@ -199,8 +212,8 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         c1.emails.add("adam.ant@pop.com")
         c1.dateOfBirth = DateTime(year = 1972, month = Month.November, day = 21)
         c1.name = "Adam Ant"
-        c1.phone.add(PhoneNumber("home", "12432523523"))
-        c1.phone.add(PhoneNumber("work", "09876543123"))
+        c1.phone.add(LabelledPhoneNumber("home", PhoneNumber("12432523523")))
+        c1.phone.add(LabelledPhoneNumber("work", PhoneNumber("09876543123")))
         abk.contacts.put(c1.alias, c1)
         sut.create(AddressBook::class, abk) { title }
 
@@ -225,8 +238,8 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         c1.emails.add("adam.ant@pop.com")
         c1.dateOfBirth = DateTime(year = 1972, month = Month.November, day = 21)
         c1.name = "Adam Ant"
-        c1.phone.add(PhoneNumber("home", "12432523523"))
-        c1.phone.add(PhoneNumber("work", "09876543123"))
+        c1.phone.add(LabelledPhoneNumber("home", PhoneNumber("12432523523")))
+        c1.phone.add(LabelledPhoneNumber("work", PhoneNumber("09876543123")))
         abk.contacts.put(c1.alias, c1)
         val c2 = Contact("brian")
         abk.contacts.put(c2.alias, c2)
@@ -245,7 +258,10 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
             val exp = me.value
             val act = actual.contacts[me.key]!!
             assertEquals(exp, act)
-            assertEquals(exp.age, act.age)
+            //assertEquals(exp.age, act.age)
+            // age will not be exactly == becaue it used DateTime.now, which changes between each call to age
+            // instead check nearly equals
+            assertTrue((exp.age - act.age) < TimeSpan(100.0))
             assertEquals(exp.alias, act.alias)
             assertEquals(exp.dateOfBirth, act.dateOfBirth)
             assertEquals(exp.emails, act.emails)

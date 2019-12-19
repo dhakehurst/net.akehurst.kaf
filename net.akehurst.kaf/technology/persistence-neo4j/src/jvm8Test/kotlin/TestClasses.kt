@@ -37,7 +37,7 @@ data class Contact(
 ) : Identifiable {
     var name: String? = null
     var emails: MutableList<String> = mutableListOf()
-    var phone: MutableSet<PhoneNumber> = mutableSetOf()
+    var phone: MutableSet<LabelledPhoneNumber> = mutableSetOf()
     var dateOfBirth: DateTime = DateTime.EPOCH
 
     val age: TimeSpan get() = DateTime.now() - this.dateOfBirth
@@ -47,7 +47,11 @@ data class Contact(
     override val identity: String = alias
 }
 
-data class PhoneNumber(
+data class LabelledPhoneNumber(
         val label: String,
-        val number: String
+        val number: PhoneNumber
+)
+
+inline class PhoneNumber(
+    val value:String
 )

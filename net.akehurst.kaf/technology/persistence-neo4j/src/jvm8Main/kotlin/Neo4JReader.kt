@@ -45,17 +45,32 @@ class Neo4JReader(
     fun recordsToPathMap(records: List<Record>): MutableMap<String, Value> {
         val map = mutableMapOf<String, Value>()
         records.forEach { rec ->
-            val path = rec.keys().first()
-            map[path] = rec[path]
-            rec.keys().forEach { key ->
-                when {
-                    key.endsWith(CypherStatement.ENTRY_PATH_SEGMENT) -> {
-                        val valueNode = rec[key].asNode()
-                        val entryPath = valueNode[CypherStatement.PATH_PROPERTY].asString()
-                        map[entryPath] = rec[key]
+            when  {
+                rec.keys()== listOf("src", "tgt", "rel") -> { // reference
+                    val tgtNode = rec["tgt"].asNode()
+                    val tgtPath = tgtNode[CypherStatement.PATH_PROPERTY].asString()
+                    val srcNode = rec["src"].asNode()
+                    val srcPath = srcNode[CypherStatement.PATH_PROPERTY].asString()
+                    map[tgtPath] = rec["tgt"]
+                    val relName = rec["rel"].asRelationship().type()
+                    val refPath = "$srcPath/#ref/$relName"
+                    map[refPath] = rec["tgt"]
+                }
+                else -> { // object
+                    val path = rec.keys().first()
+                    map[path] = rec[path]
+                    rec.keys().forEach { key ->
+                        when {
+                            key.endsWith(CypherStatement.ENTRY_PATH_SEGMENT) -> {
+                                val valueNode = rec[key].asNode()
+                                val entryPath = valueNode[CypherStatement.PATH_PROPERTY].asString()
+                                map[entryPath] = rec[key]
+                            }
+                        }
                     }
                 }
             }
+
         }
         return map //records.groupBy({ it.keys().first() }, { val key = it.keys().first(); it[key] })
     }

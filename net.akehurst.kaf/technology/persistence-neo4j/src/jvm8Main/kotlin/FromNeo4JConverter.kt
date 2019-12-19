@@ -33,10 +33,40 @@ class FromNeo4JConverter(
         val registry: DatatypeRegistry
 ) {
     var pathMap = mutableMapOf<String, Value>()
+    val objectCache = mutableMapOf<String, Any>()
+
+    private fun readSize(stm: CypherStatement): Long {
+        val records = this.reader.executeReadCypher(listOf(stm))
+        val size = records[0][0].asNode()[CypherStatement.SIZE_PROPERTY].asLong()
+        return size
+    }
+
+    private fun createCypherMatchItem(path: String, type: TypeInstance) {
+        when {
+            type.declaration.isPrimitive -> {
+            }
+            type.declaration.isCollection -> when {
+                (type.declaration as CollectionType).isArray -> {
+                }
+                (type.declaration as CollectionType).isSet -> createMatchSet(path, type)
+                (type.declaration as CollectionType).isList -> {
+                }
+                (type.declaration as CollectionType).isMap -> {
+                }
+            }
+            else -> { // isObject
+
+            }
+        }
+    }
 
     private fun createCypherMatchRootObject(datatype: Datatype, identity: String): List<CypherStatement> {
         val rootLabel = datatype.qualifiedName(".")
-        val rootNodeName = "/" + identity
+        val rootPath = "/" + identity
+
+        val stms = createCypherMatchObject(datatype, rootPath)
+        return stms
+        /*
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNodeByTypeAndPath(rootLabel, rootNodeName)
 
@@ -49,9 +79,9 @@ class FromNeo4JConverter(
                 pt.declaration.isCollection -> {
                     val pct = pt.declaration as CollectionType
                     when {
-                        pct.isSet -> createMatchSet(ppath)
-                        pct.isList -> createMatchList(ppath, pt.arguments[0].declaration)
-                        pct.isMap -> createMatchMap(ppath)
+                        pct.isSet -> createMatchSet(ppath, pt)
+                        pct.isList -> createMatchList(ppath, pt)
+                        pct.isMap -> createMatchMap(ppath, pt)
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
                 }
@@ -65,36 +95,49 @@ class FromNeo4JConverter(
             }
         }
         return listOf(cypherStatement) + composite
+         */
     }
 
-    private fun createMatchSet(path: String): List<CypherStatement> {
+    private fun createMatchSet(path: String, type: TypeInstance): List<CypherStatement> {
+        val elementType = type.arguments[0]
         val set = CypherMatchNodeByTypeAndPath(CypherStatement.SET_TYPE_LABEL, path)
         return listOf(set)
     }
 
-    private fun createMatchList(path: String, elementType: TypeDeclaration): List<CypherStatement> {
-        return if (elementType.isPrimitive) {
+    private fun createMatchList(path: String, type: TypeInstance): List<CypherStatement> {
+        val elementType = type.arguments[0]
+        return if (elementType.declaration.isPrimitive) {
             val list = CypherMatchNodeByTypeAndPath(CypherStatement.LIST_TYPE_LABEL, path)
             return listOf(list)
         } else {
-            val list = CypherMatchList(path, elementType.qualifiedName("."))
+            val list = CypherMatchList(path, elementType.declaration.qualifiedName("."))
             listOf(list)
         }
     }
 
-    private fun createMatchMap(path: String): List<CypherStatement> {
+    private fun createMatchMap(path: String, type: TypeInstance): List<CypherStatement> {
+        val keyType = type.arguments[0]
+        val valueType = type.arguments[1]
         val map = CypherMatchMap(path)
-        val entries = CypherMatchNodeByTypeAndPath(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/${CypherStatement.ENTRY_PATH_SEGMENT}")
-        return listOf(map) + entries
+        /*
+        val size = this.readSize(map)
+        val entries = mutableListOf<CypherStatement>()
+        for (i in 0..size - 1) {
+            val entry = CypherMatchNodeByTypeAndPath(CypherStatement.MAPENTRY_TYPE_LABEL, "$path/${CypherStatement.ENTRY_PATH_SEGMENT}/$i")
+            entries.add(entry)
+
+        }
+         */
+        return listOf(map) //+ entries
     }
 
     private fun createCypherMatchObject(typeDeclaration: TypeDeclaration, objPathName: String): List<CypherStatement> {
         val objLabel = typeDeclaration.qualifiedName(".")
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNodeByTypeAndPath(objLabel, objPathName)
-        cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(objPathName)))
-        val composite = (typeDeclaration as Datatype).property.values.filter {
-            it.propertyType.declaration.isPrimitive.not()
+        //cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(objPathName)))
+        val composite = (typeDeclaration as Datatype).allExplicitProperty.values.filter {
+            it.isComposite or it.propertyType.declaration.isPrimitive
         }.flatMap {
             val ppath = objPathName + "/${it.name}"
             val pt = it.propertyType
@@ -102,9 +145,9 @@ class FromNeo4JConverter(
                 pt.declaration.isCollection -> {
                     val pct = pt.declaration as CollectionType
                     when {
-                        pct.isSet -> createMatchSet(ppath)
-                        pct.isList -> createMatchList(ppath, pt.arguments[0].declaration)
-                        pct.isMap -> createMatchMap(ppath)
+                        pct.isSet -> createMatchSet(ppath, pt)
+                        pct.isList -> createMatchList(ppath, pt)
+                        pct.isMap -> createMatchMap(ppath, pt)
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
                 }
@@ -117,10 +160,24 @@ class FromNeo4JConverter(
                 }
             }
         }
-        return listOf(cypherStatement) + composite
+        val references = (typeDeclaration as Datatype).allExplicitProperty.values.filter {
+            it.isReference and it.propertyType.declaration.isPrimitive.not()
+        }.map {
+            //TODO: reference collections !
+            CypherMatchReference(
+                    srcLabel = it.datatype.qualifiedName("."),
+                    srcNodeName = "src",
+                    lnkLabel = it.name,
+                    lnkName = "rel",
+                    tgtLabel = it.propertyType.declaration.qualifiedName("."),
+                    tgtNodeName = "tgt"
+            )
+        }
+
+        return listOf(cypherStatement) + composite + references
     }
 
-    fun fetchAllIds(datatype: Datatype) : Set<String> {
+    fun fetchAllIds(datatype: Datatype): Set<String> {
         val rootLabel = datatype.qualifiedName(".")
         val key = "n"
         val cypherStatements = listOf(
@@ -143,20 +200,24 @@ class FromNeo4JConverter(
         return root
     }
 
-    fun convertValue(type: TypeInstance, neo4jValue: Value): Any? {
-        return  when (neo4jValue.type()) {
-            ts.NULL() -> null
-            ts.STRING() -> {
-                val typeValue = neo4jValue.asString().split("|")
-                val primitiveTypeName = typeValue[0]
-                val raw = typeValue[1]
-                if (CypherStatement.RAW_VALUE==primitiveTypeName) {
+    fun convertPrimitive(type: TypeInstance, raw: Any): Any {
+        return when (raw) {
+            is String -> {
+                val mapper = this.registry.findPrimitiveMapperFor(type.declaration.name)
+                if (null == mapper) {
                     raw
                 } else {
-                    val mapper = this.registry.findPrimitiveMapperFor(primitiveTypeName) as PrimitiveMapper<Any, String>
-                    mapper.toPrimitive(raw)
+                    (mapper as PrimitiveMapper<Any, String>).toPrimitive(raw)
                 }
             }
+            else -> raw
+        }
+    }
+
+    fun convertValue(type: TypeInstance, neo4jValue: Value): Any? {
+        return when (neo4jValue.type()) {
+            ts.NULL() -> null
+            ts.STRING() -> convertPrimitive(type, neo4jValue.asString())
             ts.INTEGER() -> neo4jValue.asInt()
             ts.BOOLEAN() -> neo4jValue.asBoolean()
             ts.LIST() -> neo4jValue.asList()
@@ -187,22 +248,27 @@ class FromNeo4JConverter(
         val set = mutableSetOf<Any?>()
         when {
             elementTypeInstance.declaration.isPrimitive -> {
-                val elements = node[CypherStatement.ELEMENTS_PROPERTY].asList()
-                elements.forEach { nEl ->
-                    when (nEl) {
-                        is Value -> {
-                            val el = convertValue(elementTypeInstance, nEl)
-                            set.add(el)
-                        }
-                        else -> {
-                            set.add(nEl)
+                if (node.containsKey(CypherStatement.ELEMENTS_PROPERTY)) {
+                    val elements = node[CypherStatement.ELEMENTS_PROPERTY].asList()
+                    elements.forEach { nEl ->
+                        when (nEl) {
+                            is Value -> {
+                                val el = convertValue(elementTypeInstance, nEl)
+                                set.add(el)
+                            }
+                            else -> {
+                                val prim = convertPrimitive(elementTypeInstance, nEl)
+                                set.add(prim)
+                            }
                         }
                     }
+                } else {
+                    // no elements
                 }
             }
             else -> {
                 for (elementIndex in 0 until size) {
-                    val elementPath = "$path/$elementIndex"
+                    val elementPath = "$path/${CypherStatement.ELEMENT_PATH_SEGMENT}/$elementIndex"
                     val cypherValueStatements = this.createCypherMatchObject(elementTypeInstance.declaration, "$elementPath")
                     val res = reader.executeReadCypher(cypherValueStatements) //TODO read all elements at once!
                     val pm = reader.recordsToPathMap(res.toList())
@@ -234,7 +300,8 @@ class FromNeo4JConverter(
                                 list.add(el)
                             }
                             else -> {
-                                list.add(nEl)
+                                val prim = convertPrimitive(elementTypeInstance, nEl)
+                                list.add(prim)
                             }
                         }
                     }
@@ -266,15 +333,16 @@ class FromNeo4JConverter(
 
         val map = mutableMapOf<Any, Any?>()
         for (entry in 0 until size) {
-            val entryPath = "$path/$entry"
+            val entryPath = "$path/${CypherStatement.ENTRY_PATH_SEGMENT}/$entry"
+            val valuePath = "$entryPath/${CypherStatement.VALUE_PATH_SEGMENT}"
             val entryNode = pathMap[entryPath]!!.asNode()
             val key = convertValue(type, entryNode[CypherStatement.KEY_PROPERTY]) ?: throw PersistenceException("Cannot have a null key")
             val valueType = type.arguments[1]
-            val cypherValueStatements = this.createCypherMatchObject(valueType.declaration, "$entryPath/value")
+            val cypherValueStatements = this.createCypherMatchObject(valueType.declaration, valuePath)
             val res = reader.executeReadCypher(cypherValueStatements)  //TODO read all entries at once!
             val pm = reader.recordsToPathMap(res.toList())
             pathMap.putAll(pm)
-            val valueNeo4J = pm["$entryPath/value"]!!
+            val valueNeo4J = pm[valuePath]!!
             val value = convertValue(valueType, valueNeo4J)
             map[key] = value
         }
@@ -283,42 +351,72 @@ class FromNeo4JConverter(
 
     fun convertObject(type: TypeInstance, node: Node): Any {
         if (type.declaration is Datatype) {
-            val dt = type.declaration as Datatype
             val path = node[CypherStatement.PATH_PROPERTY].asString()
-            val idProps = dt.identityProperties.map {
-                val neo4jValue = node[it.name]
-                //TODO: handel non primitive properties
-                if (null == neo4jValue) {
-                    null
+            val className = node[CypherStatement.CLASS_PROPERTY].asString()
+            return if (objectCache.containsKey(path)) {
+                objectCache[path]!!
+            } else {
+                val classDt = this.registry.findDatatypeByName(className.substringAfterLast(".")) //TODO: change when registry supports QualName lookup
+                if (null==classDt) {
+                    throw PersistenceException("No datatype information found for $className")
                 } else {
-                    val v = this.convertValue(it.propertyType, neo4jValue)
-                    v
-                }
-            }
-            val obj = dt.construct(*idProps.toTypedArray()) //TODO: need better error when this fails
-            //resolvedReference[path] = obj
-
-            // TODO: change this to enable nonExplicit properties, once JS reflection works
-            dt.explicitNonIdentityProperties.forEach {
-                if (it.ignore.not()) {
-                    when {
-                        (it.propertyType.declaration.isPrimitive) -> {
-                            val neo4JValue = node[it.name]
-                            val value = this.convertValue(it.propertyType, neo4JValue)
-                            it.set(obj, value)
-                        }
-                        else -> {
-                            val ppath = "$path/${it.name}"
-                            val neo4jValueList = pathMap[ppath]
-                            if (null != neo4jValueList) {
-                                val value = this.convertValue(it.propertyType, neo4jValueList)
-                                it.set(obj, value)
+                    val idProps = classDt.identityProperties.map { prop ->
+                        when {
+                            (prop.propertyType.declaration.isPrimitive) -> {
+                                val neo4JValue = node[prop.name]
+                                val value = this.convertValue(prop.propertyType, neo4JValue)
+                                value
+                            }
+                            prop.isReference -> { // but not primitive
+                                val refPath = "$path/#ref/${prop.name}"
+                                val neo4jValue = pathMap[refPath]
+                                if (null != neo4jValue) {
+                                    val value = this.convertValue(prop.propertyType, neo4jValue)
+                                    value
+                                } else {
+                                    null
+                                }
+                            }
+                            prop.isComposite -> { // but not primitive
+                                val ppath = "$path/${prop.name}"
+                                val neo4jValue = pathMap[ppath]
+                                if (null != neo4jValue) {
+                                    val value = this.convertValue(prop.propertyType, neo4jValue)
+                                    value
+                                } else {
+                                    null
+                                }
+                            }
+                            else -> {
                             }
                         }
                     }
+                    val obj = classDt.construct(*idProps.toTypedArray()) //TODO: need better error when this fails
+                    //resolvedReference[path] = obj
+
+                    // TODO: change this to enable nonExplicit properties, once JS reflection works
+                    classDt.allExplicitNonIdentityProperties.forEach {
+                        if (it.ignore.not()) {
+                            when {
+                                (it.propertyType.declaration.isPrimitive) -> {
+                                    val neo4JValue = node[it.name]
+                                    val value = this.convertValue(it.propertyType, neo4JValue)
+                                    it.set(obj, value)
+                                }
+                                else -> {
+                                    val ppath = "$path/${it.name}"
+                                    val neo4jValueList = pathMap[ppath]
+                                    if (null != neo4jValueList) {
+                                        val value = this.convertValue(it.propertyType, neo4jValueList)
+                                        it.set(obj, value)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    obj
                 }
             }
-            return obj
         } else {
             throw PersistenceException("type must be a Datatype to convert to an object")
         }
