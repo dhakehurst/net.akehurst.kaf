@@ -20,15 +20,12 @@ dependencies {
     jvm8MainImplementation("io.ktor:ktor-server-netty:$version_ktor")
     jvm8MainImplementation("com.github.lamba92:ktor-spa:$version_ktor_spa")
 
-    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$version_coroutines") {
-        isForce=true
+    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native") {
+        version {
+            strictly("$version_coroutines")
+        }
     }
-    jvm8MainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
-        isForce=true
-    }
-    jsMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$version_coroutines") {
-        isForce=true
-    }
+
     // test
     commonTestImplementation(project(":kaf-service-logging-console"))
     commonTestImplementation(project(":kaf-service-configuration-map"))
