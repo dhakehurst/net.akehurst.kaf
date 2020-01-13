@@ -392,7 +392,7 @@ class FromNeo4JConverter(
                         }
                     }
                     val obj = classDt.construct(*idProps.toTypedArray()) //TODO: need better error when this fails
-                    //resolvedReference[path] = obj
+                    objectCache[path] = obj
 
                     // TODO: change this to enable nonExplicit properties, once JS reflection works
                     classDt.allExplicitNonIdentityProperties.forEach {
