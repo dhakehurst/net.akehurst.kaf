@@ -23,6 +23,12 @@ class KSerialiserCypherStatements(
         } else {
             var resultPath: List<String>? = null //TODO: terminate walking early if result found
             val walker = kompositeWalker<List<String>, Boolean>(registry) {
+                configure {
+                    ELEMENTS = CypherStatement.ELEMENT_RELATION
+                    ENTRIES = CypherStatement.ENTRY_RELATION
+                    KEY = CypherStatement.KEY_RELATION
+                    VALUE = CypherStatement.VALUE_RELATION
+                }
                 collBegin { path, info, type, coll ->
                     WalkInfo(info.up, info.acc)
                 }

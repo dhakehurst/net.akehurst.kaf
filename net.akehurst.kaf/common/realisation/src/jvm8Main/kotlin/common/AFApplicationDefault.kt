@@ -20,8 +20,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.service.api.Service
-import net.akehurst.kaf.service.api.serviceReference
-import net.akehurst.kaf.service.logging.api.logger
 import kotlin.reflect.KClass
 
 actual inline fun afApplication(self:Application, identity: String, init: AFApplicationDefault.Builder.() -> Unit): AFApplication {

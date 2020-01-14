@@ -220,6 +220,7 @@ class FromNeo4JConverter(
             ts.STRING() -> convertPrimitive(type, neo4jValue.asString())
             ts.INTEGER() -> neo4jValue.asInt()
             ts.BOOLEAN() -> neo4jValue.asBoolean()
+            ts.FLOAT() -> neo4jValue.asDouble()
             ts.LIST() -> neo4jValue.asList()
             //ts.SET() -> neo4jValue.asSet()
             ts.MAP() -> neo4jValue.asMap()
@@ -357,7 +358,7 @@ class FromNeo4JConverter(
                 objectCache[path]!!
             } else {
                 val classDt = this.registry.findDatatypeByName(className.substringAfterLast(".")) //TODO: change when registry supports QualName lookup
-                if (null==classDt) {
+                if (null == classDt) {
                     throw PersistenceException("No datatype information found for $className")
                 } else {
                     val idProps = classDt.identityProperties.map { prop ->
@@ -387,8 +388,7 @@ class FromNeo4JConverter(
                                     null
                                 }
                             }
-                            else -> {
-                            }
+                            else -> throw PersistenceException("Cannot convert ${prop}")
                         }
                     }
                     val obj = classDt.construct(*idProps.toTypedArray()) //TODO: need better error when this fails
@@ -403,14 +403,28 @@ class FromNeo4JConverter(
                                     val value = this.convertValue(it.propertyType, neo4JValue)
                                     it.set(obj, value)
                                 }
-                                else -> {
-                                    val ppath = "$path/${it.name}"
-                                    val neo4jValueList = pathMap[ppath]
-                                    if (null != neo4jValueList) {
-                                        val value = this.convertValue(it.propertyType, neo4jValueList)
+                                it.isReference -> { // but not primitive
+                                    val refPath = "$path/#ref/${it.name}"
+                                    val neo4jValue = pathMap[refPath]
+                                    if (null != neo4jValue) {
+                                        val value = this.convertValue(it.propertyType, neo4jValue)
                                         it.set(obj, value)
+                                    } else {
+                                        // do nothing
+                                    }
+
+                                }
+                                it.isComposite -> { // but not primitive
+                                    val ppath = "$path/${it.name}"
+                                    val neo4jValue = pathMap[ppath]
+                                    if (null != neo4jValue) {
+                                        val value = this.convertValue(it.propertyType, neo4jValue)
+                                        it.set(obj, value)
+                                    } else {
+                                        // do nothing
                                     }
                                 }
+                                else -> throw PersistenceException("Cannot convert ${it}")
                             }
                         }
                     }
@@ -420,5 +434,9 @@ class FromNeo4JConverter(
         } else {
             throw PersistenceException("type must be a Datatype to convert to an object")
         }
+    }
+
+    private fun setPrimitive() {
+
     }
 }

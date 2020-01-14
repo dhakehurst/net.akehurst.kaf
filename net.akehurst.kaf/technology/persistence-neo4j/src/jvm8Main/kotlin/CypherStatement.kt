@@ -263,7 +263,7 @@ data class CypherMatchList(
 ) : CypherStatement {
     override fun toCypherStatement(): String {
         return """
-            MATCH (`$path`:`${CypherStatement.LIST_TYPE_LABEL}`{`${CypherStatement.PATH_PROPERTY}`:`$path`})
+            MATCH (`$path`:`${CypherStatement.LIST_TYPE_LABEL}`{`${CypherStatement.PATH_PROPERTY}`:'$path'})
             UNWIND(range(0,`$path`.`${CypherStatement.SIZE_PROPERTY}`-1)) AS elementIndex
             MATCH (`$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`:`${elementTypeLabel}`)
             WHERE `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/'+elementIndex
@@ -278,7 +278,7 @@ data class CypherMatchMap(
     override fun toCypherStatement(): String {
 
         return """
-            MATCH (`$path`:`${CypherStatement.MAP_TYPE_LABEL}`)
+            MATCH (`$path`:`${CypherStatement.MAP_TYPE_LABEL}`{`${CypherStatement.PATH_PROPERTY}`:'$path'})
             UNWIND(range(0,`$path`.`${CypherStatement.SIZE_PROPERTY}`-1)) AS entryIndex
             MATCH (`$path/${CypherStatement.ENTRY_PATH_SEGMENT}`:`${CypherStatement.MAPENTRY_TYPE_LABEL}`)
             WHERE `$path/${CypherStatement.ENTRY_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/${CypherStatement.ENTRY_PATH_SEGMENT}/'+entryIndex
