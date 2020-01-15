@@ -337,7 +337,8 @@ class FromNeo4JConverter(
             val entryPath = "$path/${CypherStatement.ENTRY_PATH_SEGMENT}/$entry"
             val valuePath = "$entryPath/${CypherStatement.VALUE_PATH_SEGMENT}"
             val entryNode = pathMap[entryPath]!!.asNode()
-            val key = convertValue(type, entryNode[CypherStatement.KEY_PROPERTY]) ?: throw PersistenceException("Cannot have a null key")
+            val keyType = type.arguments[0]
+            val key = convertValue(keyType, entryNode[CypherStatement.KEY_PROPERTY]) ?: throw PersistenceException("Cannot have a null key")
             val valueType = type.arguments[1]
             val cypherValueStatements = this.createCypherMatchObject(valueType.declaration, valuePath)
             val res = reader.executeReadCypher(cypherValueStatements)  //TODO read all entries at once!
