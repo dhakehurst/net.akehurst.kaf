@@ -142,6 +142,9 @@ class FromNeo4JConverter(
             val ppath = objPathName + "/${it.name}"
             val pt = it.propertyType
             when {
+                pt.declaration.isPrimitive -> {
+                    emptyList<CypherStatement>()
+                }
                 pt.declaration.isCollection -> {
                     val pct = pt.declaration as CollectionType
                     when {
@@ -151,12 +154,12 @@ class FromNeo4JConverter(
                         else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
                     }
                 }
-                else -> {
+                else -> { // isObject
                     val childLabel = pt.declaration.qualifiedName(".")
                     // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
                     val match = CypherMatchNodeByTypeAndPath(childLabel, ppath)
                     match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
-                    listOf(match)
+                    listOf(match) + createCypherMatchObject(pt.declaration, ppath)
                 }
             }
         }

@@ -266,8 +266,8 @@ data class CypherMatchList(
             MATCH (`$path`:`${CypherStatement.LIST_TYPE_LABEL}`{`${CypherStatement.PATH_PROPERTY}`:'$path'})
             UNWIND(range(0,`$path`.`${CypherStatement.SIZE_PROPERTY}`-1)) AS elementIndex
             MATCH (`$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`:`${elementTypeLabel}`)
-            WHERE `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/'+elementIndex
-            RETURN `$path`, `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`, '$path/'+elementIndex AS elementPath
+            WHERE `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`.`${CypherStatement.PATH_PROPERTY}`='$path/${CypherStatement.ELEMENT_PATH_SEGMENT}/'+elementIndex
+            RETURN `$path`, `$path/${CypherStatement.ELEMENT_PATH_SEGMENT}`, '$path/${CypherStatement.ELEMENT_PATH_SEGMENT}/'+elementIndex AS elementPath
         """.trimIndent()
     }
 }
