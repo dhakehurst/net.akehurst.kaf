@@ -5,3 +5,4 @@ kt2ts {
             "net.akehurst.kaf.technology.messageChannel.api.*"
     ))
 }
+

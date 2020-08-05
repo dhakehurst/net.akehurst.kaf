@@ -10,3 +10,4 @@ kt2ts {
             "net.akehurst.kaf.service.api.*"
     ))
 }
+

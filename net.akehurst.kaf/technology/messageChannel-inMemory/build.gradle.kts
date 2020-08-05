@@ -19,3 +19,4 @@ kt2ts {
             "net.akehurst.kaf.messageChannel.client.ktor.*"
     ))
 }
+

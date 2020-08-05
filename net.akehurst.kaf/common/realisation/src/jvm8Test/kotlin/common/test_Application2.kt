@@ -18,14 +18,13 @@ package net.akehurst.kaf.common.realisation
 
 import net.akehurst.kaf.common.api.Active
 import net.akehurst.kaf.common.api.Application
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
 import net.akehurst.kaf.service.configuration.api.configuredValue
-import net.akehurst.kaf.service.configuration.map.ConfigurationMap
+import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
@@ -66,7 +65,7 @@ class test_Application2 {
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {
-                ConfigurationMap(mutableMapOf(
+                ServiceConfigurationMap(mutableMapOf(
                         "sut.greeter.greeting" to "Hello World!"
                 ))
             }

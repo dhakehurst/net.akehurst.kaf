@@ -17,15 +17,17 @@ kotlin {
         //webpack fails to find 'text-encoding'
         val jsTest by getting {
             dependencies {
-                api(npm("text-encoding"))
+                api(npm("text-encoding","0.7.0"))
             }
         }
     }
 }
-
+/*
 kt2ts {
     jvmTargetName.set("jvm8")
     classPatterns.set(listOf(
             "net.akehurst.kaf.technology.messageChannel.websocket.client.ktor.*"
     ))
 }
+
+ */

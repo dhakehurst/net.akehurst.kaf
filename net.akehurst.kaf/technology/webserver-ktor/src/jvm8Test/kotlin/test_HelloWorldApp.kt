@@ -22,7 +22,7 @@ import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
-import net.akehurst.kaf.service.configuration.map.ConfigurationMap
+import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
@@ -44,7 +44,7 @@ class test_HelloWorldApp(
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }
         defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
         defineService(ConfigurationService::class) {
-            ConfigurationMap(mutableMapOf(
+            ServiceConfigurationMap(mutableMapOf(
                     "test.webserver.port" to 9999
             ))
         }

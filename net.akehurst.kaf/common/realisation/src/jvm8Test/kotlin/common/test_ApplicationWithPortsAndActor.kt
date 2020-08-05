@@ -23,7 +23,7 @@ import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
 import net.akehurst.kaf.service.configuration.api.configuredValue
-import net.akehurst.kaf.service.configuration.map.ConfigurationMap
+import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
@@ -97,7 +97,7 @@ class test_ApplicationWithPortsAndActor {
 
         override val af = afApplication(this,afId) {
             defineService(ConfigurationService::class) {
-                ConfigurationMap(mutableMapOf(
+                ServiceConfigurationMap(mutableMapOf(
                         "sut.greeter.handler.greeting" to "Hello World!"
                 ))
             }

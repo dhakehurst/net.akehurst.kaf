@@ -43,7 +43,6 @@ import io.ktor.util.generateNonce
 import io.ktor.websocket.WebSocketServerSession
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
-import it.lamba.ktor.features.SinglePageApplication
 import kotlinx.coroutines.channels.consumeEach
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.common.realisation.afComponent
