@@ -28,8 +28,9 @@ import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
+
 
 class test_ApplicationFullAsync {
 

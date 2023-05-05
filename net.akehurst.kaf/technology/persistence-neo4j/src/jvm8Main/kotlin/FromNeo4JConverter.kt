@@ -16,7 +16,7 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import com.soywiz.klock.DateTime
+import korlibs.time.DateTime
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kotlin.komposite.api.*
 import net.akehurst.kotlin.komposite.common.DatatypeRegistry
@@ -61,7 +61,7 @@ class FromNeo4JConverter(
     }
 
     private fun createCypherMatchRootObject(datatype: Datatype, identity: String): List<CypherStatement> {
-        val rootLabel = datatype.qualifiedName(".")
+        val rootLabel = datatype.qualifiedName
         val rootPath = "/" + identity
 
         val stms = createCypherMatchObject(datatype, rootPath)
@@ -110,7 +110,7 @@ class FromNeo4JConverter(
             val list = CypherMatchNodeByTypeAndPath(CypherStatement.LIST_TYPE_LABEL, path)
             return listOf(list)
         } else {
-            val list = CypherMatchList(path, elementType.declaration.qualifiedName("."))
+            val list = CypherMatchList(path, elementType.declaration.qualifiedName)
             listOf(list)
         }
     }
@@ -132,7 +132,7 @@ class FromNeo4JConverter(
     }
 
     private fun createCypherMatchObject(typeDeclaration: TypeDeclaration, objPathName: String): List<CypherStatement> {
-        val objLabel = typeDeclaration.qualifiedName(".")
+        val objLabel = typeDeclaration.qualifiedName
         //TODO: handle composition and reference!
         val cypherStatement = CypherMatchNodeByTypeAndPath(objLabel, objPathName)
         //cypherStatement.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(objPathName)))
@@ -151,11 +151,11 @@ class FromNeo4JConverter(
                         pct.isSet -> createMatchSet(ppath, pt)
                         pct.isList -> createMatchList(ppath, pt)
                         pct.isMap -> createMatchMap(ppath, pt)
-                        else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName(".")}")
+                        else -> throw PersistenceException("unsupported collection type ${pct.qualifiedName}")
                     }
                 }
                 else -> { // isObject
-                    val childLabel = pt.declaration.qualifiedName(".")
+                    val childLabel = pt.declaration.qualifiedName
                     // CypherMatchLink(rootLabel, rootNodeName, it.name, childLabel, childNodeName)
                     val match = CypherMatchNodeByTypeAndPath(childLabel, ppath)
                     match.properties.add(CypherProperty(CypherStatement.PATH_PROPERTY, CypherValue(ppath)))
@@ -168,11 +168,11 @@ class FromNeo4JConverter(
         }.map {
             //TODO: reference collections !
             CypherMatchReference(
-                    srcLabel = it.datatype.qualifiedName("."),
+                    srcLabel = it.datatype.qualifiedName,
                     srcNodeName = "src",
                     lnkLabel = it.name,
                     lnkName = "rel",
-                    tgtLabel = it.propertyType.declaration.qualifiedName("."),
+                    tgtLabel = it.propertyType.declaration.qualifiedName,
                     tgtNodeName = "tgt"
             )
         }
@@ -181,7 +181,7 @@ class FromNeo4JConverter(
     }
 
     fun fetchAllIds(datatype: Datatype): Set<String> {
-        val rootLabel = datatype.qualifiedName(".")
+        val rootLabel = datatype.qualifiedName
         val key = "n"
         val cypherStatements = listOf(
                 CypherMatchAllNodeByType(rootLabel, key)
@@ -230,7 +230,7 @@ class FromNeo4JConverter(
             ts.DATE_TIME() -> {
                 val dateTime = neo4jValue.asZonedDateTime()
                 val unixMillis = dateTime.toInstant().toEpochMilli()
-                DateTime.fromUnix(unixMillis)
+                DateTime.fromUnixMillis(unixMillis)
             }
             ts.NODE() -> {
                 val node = neo4jValue.asNode()

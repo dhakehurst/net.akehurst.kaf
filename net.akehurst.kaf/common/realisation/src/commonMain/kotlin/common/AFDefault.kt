@@ -41,7 +41,7 @@ abstract class AFDefault(
         }
     }
 
-    override fun externalConnections(kclass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>> = framework.externalConnections(self(), kclass)
+    override fun externalConnections(klass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>> = framework.externalConnections(self(), klass)
 
     override fun doInjections(root: Passive) {
         framework.doInjections(emptyList<String>(), root)

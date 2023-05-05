@@ -1,5 +1,5 @@
 dependencies {
 
-    commonMainImplementation project(":kaf-service-commandLineHandler-api")
+    commonMainImplementation( project(":kaf-service-commandLineHandler-api"))
 
 }

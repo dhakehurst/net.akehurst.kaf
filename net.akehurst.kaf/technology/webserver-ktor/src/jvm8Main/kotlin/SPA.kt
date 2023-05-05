@@ -2,24 +2,18 @@
 
 package net.akehurst.kaf.technology.webserver.ktor
 
-import io.ktor.application.*
-import io.ktor.features.StatusPages
+
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.*
-import io.ktor.request.acceptItems
-import io.ktor.request.uri
-import io.ktor.response.ApplicationSendPipeline
-import io.ktor.response.respond
-import io.ktor.response.respondFile
-import io.ktor.routing.routing
+
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.nio.file.Path
 import java.nio.file.Paths
-
+/*
 /**
  * The SPA configuration class.
  * @param configuration The object configured by the install lambda.
@@ -112,3 +106,4 @@ class SinglePageApplication(private val configuration: Configuration) {
 
 fun String.notContains(regex: Regex) = !contains(regex)
 fun File.notExists() = !exists()
+*/

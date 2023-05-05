@@ -166,7 +166,7 @@ open class AFActorDefault(
 
     override fun receive(callable: KCallable<*>, context: AsyncCallContext, action: suspend () -> Unit) {
         log.trace { "received: ${callable.name}" }
-        inbox.offer(Signal(callable, action))
+        inbox.trySend(Signal(callable, action))
     }
 
     override suspend fun send(toSend: suspend () -> Unit): AsyncCall {

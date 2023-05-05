@@ -17,7 +17,10 @@
 package net.akehurst.kaf.technology.webserver.ktor
 
 import io.ktor.util.generateNonce
+import net.akehurst.kaf.common.api.AFActor
+import net.akehurst.kaf.common.api.Actor
 import net.akehurst.kaf.common.api.Application
+import net.akehurst.kaf.common.realisation.afActor
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
@@ -36,7 +39,13 @@ class test_HelloWorldApp(
         afId:String
 ) : Application {
 
-    val webserver = WebserverKtor(String::class) {
+    val actor = object :Actor {
+        override val af = afActor {
+
+        }
+    }
+
+    val webserver = WebserverKtor(){
         generateNonce()
     }
 
@@ -49,7 +58,7 @@ class test_HelloWorldApp(
             ))
         }
         execute = {
-            webserver.addTextRoute("/","Hello World!")
+            webserver.addTextRoute("/greet","Hello World!")
         }
     }
 

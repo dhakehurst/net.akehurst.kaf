@@ -91,10 +91,10 @@ class KSerialiserCypherStatements(
             }
             reference { path, info, value, property ->
                 val refPath = calcReferencePath(rootItem, value)
-                val fromLabel = property.datatype.qualifiedName(".")
+                val fromLabel = property.datatype.qualifiedName
                 val fromId = (rootPath + path.dropLast(1)).joinToString("/", "/")
                 val relLabel = path.last()
-                val toLabel = property.propertyType.declaration.qualifiedName(".")
+                val toLabel = property.propertyType.declaration.qualifiedName
                 val toId = (rootPath + refPath).joinToString("/", "/")
                 val stm = CypherReference(fromLabel, fromId, relLabel, toLabel, toId)
                 currentObjStack.push(stm)
@@ -192,9 +192,9 @@ class KSerialiserCypherStatements(
             objectBegin { path, info, obj, datatype ->
                 val objId = (rootPath + path).joinToString("/", "/")
                 val additionalLabels = datatype.allSuperTypes.map {
-                    it.type.declaration.qualifiedName(".")
+                    it.type.declaration.qualifiedName
                 }
-                val objClass = datatype.qualifiedName(".")
+                val objClass = datatype.qualifiedName
                 val obj = CypherObject(objClass, objId, additionalLabels)
                 currentObjStack.push(obj)
                 WalkInfo(info.up, info.acc + obj)

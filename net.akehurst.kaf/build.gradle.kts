@@ -14,157 +14,125 @@
  * limitations under the License.
  */
 
-import com.jfrog.bintray.gradle.BintrayExtension
-import com.jfrog.bintray.gradle.tasks.BintrayUploadTask
-import org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import java.io.File
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.github.gmazzo.gradle.plugins.BuildConfigExtension
 
 plugins {
-    kotlin("multiplatform") version ("1.4.0-rc") apply false
-    id("net.akehurst.kotlin.kt2ts") version ("1.6.0") apply false
-    id("com.jfrog.bintray") version ("1.8.4") apply false
+    kotlin("multiplatform") version ("1.8.21") apply false
+    id("org.jetbrains.dokka") version ("1.8.10") apply false
+    id("com.github.gmazzo.buildconfig") version ("3.1.0") apply false
+    id("nu.studer.credentials") version ("3.0")
+    id("net.akehurst.kotlin.gradle.plugin.exportPublic") version ("1.8.21") apply false
 }
+val kotlin_languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
+val kotlin_apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
+val jvmTargetVersion = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
 
 allprojects {
-
     val version_project: String by project
-    val group_project = "${rootProject.name}"
+    val group_project = rootProject.name
 
     group = group_project
     version = version_project
 
     buildDir = File(rootProject.projectDir, ".gradle-build/${project.name}")
-
 }
-
-fun getProjectProperty(s: String) = project.findProperty(s) as String?
-
 
 subprojects {
 
     apply(plugin = "org.jetbrains.kotlin.multiplatform")
-    apply(plugin = "net.akehurst.kotlin.kt2ts")
     apply(plugin = "maven-publish")
-    apply(plugin = "com.jfrog.bintray")
+    apply(plugin = "signing")
+    apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "com.github.gmazzo.buildconfig")
+    apply(plugin = "net.akehurst.kotlin.gradle.plugin.exportPublic")
 
     repositories {
-        mavenLocal()
+        mavenLocal {
+            content {
+                includeGroupByRegex("net\\.akehurst.+")
+            }
+        }
         mavenCentral()
-        jcenter()
+    }
+
+    configure<BuildConfigExtension> {
+        val now = java.time.Instant.now()
+        fun fBbuildStamp(): String = java.time.format.DateTimeFormatter.ISO_DATE_TIME.withZone(java.time.ZoneId.of("UTC")).format(now)
+        fun fBuildDate(): String = java.time.format.DateTimeFormatter.ofPattern("yyyy-MMM-dd").withZone(java.time.ZoneId.of("UTC")).format(now)
+        fun fBuildTime(): String = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss z").withZone(java.time.ZoneId.of("UTC")).format(now)
+
+        packageName("${project.group}.${project.name.replace("-", ".")}")
+        buildConfigField("String", "version", "\"${project.version}\"")
+        buildConfigField("String", "buildStamp", "\"${fBbuildStamp()}\"")
+        buildConfigField("String", "buildDate", "\"${fBuildDate()}\"")
+        buildConfigField("String", "buildTime", "\"${fBuildTime()}\"")
     }
 
     configure<KotlinMultiplatformExtension> {
         jvm("jvm8") {
             val main by compilations.getting {
-                kotlinOptions {
-                    jvmTarget = JavaVersion.VERSION_1_8.toString()
+                compilerOptions.configure {
+                    languageVersion.set(kotlin_languageVersion)
+                    apiVersion.set(kotlin_apiVersion)
+                    jvmTarget.set(jvmTargetVersion)
                 }
             }
             val test by compilations.getting {
-                kotlinOptions {
-                    jvmTarget = JavaVersion.VERSION_1_8.toString()
+                compilerOptions.configure {
+                    languageVersion.set(kotlin_languageVersion)
+                    apiVersion.set(kotlin_apiVersion)
+                    jvmTarget.set(jvmTargetVersion)
                 }
             }
         }
-        js("js") {
-            nodejs()
-            browser()
+        js("js",IR) {
+            nodejs {
+                testTask {
+                    useMocha {
+                        timeout = "5000"
+                    }
+                }
+            }
+            browser {
+                webpackTask {
+                    outputFileName = "${project.group}-${project.name}.js"
+                }
+                testTask {
+                    useMocha {
+                        timeout = "5000"
+                    }
+                }
+            }
         }
+
         sourceSets {
-            val commonMain by getting {
-                kotlin.srcDir("$buildDir/generated/kotlin")
+            all {
+                languageSettings.optIn("kotlin.ExperimentalStdlibApi")
             }
         }
     }
 
-    val now = Instant.now()
-    fun fBbuildStamp(): String {
-        return DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(now)
-    }
+    //val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
 
-    fun fBuildDate(): String {
-        return DateTimeFormatter.ofPattern("yyyy-MMM-dd").withZone(ZoneId.of("UTC")).format(now)
+    val javadocJar: TaskProvider<Jar> by tasks.registering(Jar::class) {
+        //dependsOn(dokkaHtml)
+        archiveClassifier.set("javadoc")
+        //from(dokkaHtml.outputDirectory)
     }
-
-    fun fBuildTime(): String {
-        return DateTimeFormatter.ofPattern("HH:mm:ss z").withZone(ZoneId.of("UTC")).format(now)
-    }
-    tasks.register<Copy>("generateFromTemplates") {
-        val templateContext = mapOf(
-                "version" to project.version,
-                "buildStamp" to fBbuildStamp(),
-                "buildDate" to fBuildDate(),
-                "buildTime" to fBuildTime()
-        )
-        inputs.properties(templateContext) // for gradle up-to-date check
-        from("src/template/kotlin")
-        into("$buildDir/generated/kotlin")
-        expand(templateContext)
-    }
-    tasks.getByName("compileKotlinMetadata") {
-        dependsOn("generateFromTemplates")
-    }
-    tasks.getByName("compileKotlinJvm8") {
-        dependsOn("generateFromTemplates")
-    }
-    tasks.getByName("compileKotlinJs") {
-        dependsOn("generateFromTemplates")
-    }
-    //tasks.getByName("compileKotlinJsLegacy") {
-    //    dependsOn("generateFromTemplates")
-    //}
+    //tasks.named("publish").get().dependsOn("javadocJar")
 
     dependencies {
-        "commonMainImplementation"(kotlin("stdlib"))
         "commonTestImplementation"(kotlin("test"))
         "commonTestImplementation"(kotlin("test-annotations-common"))
-
-        "jvm8MainImplementation"(kotlin("stdlib-jdk8"))
-        "jvm8TestImplementation"(kotlin("test-junit"))
-
-        "jsMainImplementation"(kotlin("stdlib-js"))
-        "jsTestImplementation"(kotlin("test-js"))
     }
 
-    configure<BintrayExtension> {
-        user = getProjectProperty("bintrayUser")
-        key = getProjectProperty("bintrayApiKey")
-        publish = true
-        override = true
-        setPublications("kotlinMultiplatform", "metadata", "js", "jvm8")
-        pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
-            repo = "maven"
-            name = "${rootProject.name}"
-            userOrg = user
-            websiteUrl = "https://github.com/dhakehurst/net.akehurst.kaf"
-            vcsUrl = "https://github.com/dhakehurst/net.akehurst.kaf"
-            setLabels("kotlin")
-            setLicenses("Apache-2.0")
-        })
-    }
+    fun getProjectProperty(s: String) = project.findProperty(s) as String?
 
-    val bintrayUpload by tasks.getting
-    val publishToMavenLocal by tasks.getting
-    val publishing = extensions.getByType(PublishingExtension::class.java)
+    val creds = project.properties["credentials"] as nu.studer.gradle.credentials.domain.CredentialsContainer
+    val sonatype_pwd = creds.forKey("SONATYPE_PASSWORD") as String?
+        ?: getProjectProperty("SONATYPE_PASSWORD")
+        ?: error("Must set project property with Sonatype Password (-P SONATYPE_PASSWORD=<...> or set in ~/.gradle/gradle.properties)")
+    project.ext.set("signing.password", sonatype_pwd)
 
-    bintrayUpload.dependsOn(publishToMavenLocal)
-
-    tasks.withType<BintrayUploadTask> {
-        doFirst {
-            publishing.publications
-                    .filterIsInstance<MavenPublication>()
-                    .forEach { publication ->
-                        val moduleFile = buildDir.resolve("publications/${publication.name}/module.json")
-                        if (moduleFile.exists()) {
-                            publication.artifact(object : FileBasedMavenArtifact(moduleFile) {
-                                override fun getDefaultExtension() = "module"
-                            })
-                        }
-                    }
-        }
-    }
 }

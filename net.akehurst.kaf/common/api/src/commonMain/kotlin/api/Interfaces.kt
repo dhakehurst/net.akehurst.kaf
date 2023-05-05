@@ -151,7 +151,7 @@ interface AF : Identifiable {
     override val identity: String
     val framework: ApplicationFrameworkService
     val log: Logger
-    fun externalConnections(kClass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
+    fun externalConnections(klass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
     fun doInjections(root: Passive)
 }
 

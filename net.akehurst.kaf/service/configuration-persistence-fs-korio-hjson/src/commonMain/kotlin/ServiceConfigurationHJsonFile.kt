@@ -45,7 +45,6 @@ class ServiceConfigurationHJsonFile(
 
     private val serialiser = KSerialiserHJson()
 
-    @ExperimentalStdlibApi
     val hjson: HJsonDocument by lazy {
         val bytes = fs.read(filePath)
         HJson.process(bytes.decodeToString())
@@ -55,7 +54,6 @@ class ServiceConfigurationHJsonFile(
         this.serialiser.registerKotlinStdPrimitives()
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Any> get(path: String, default: () -> T): T {
         val pathList = path.split('.')
         val parentPath = pathList.dropLast(1)

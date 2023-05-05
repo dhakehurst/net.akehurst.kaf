@@ -16,7 +16,7 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import com.soywiz.klock.DateTime
+import korlibs.time.DateTime
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
@@ -25,33 +25,20 @@ import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.komposite.common.DatatypeRegistry
-import net.akehurst.kotlin.komposite.common.WalkInfo
-import net.akehurst.kotlin.komposite.common.kompositeWalker
-import net.akehurst.kotlinx.collections.Stack
+import org.neo4j.configuration.connectors.BoltConnector
+import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.dbms.api.DatabaseManagementService
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.graphdb.GraphDatabaseService
-import org.neo4j.graphdb.factory.GraphDatabaseFactory
-import org.neo4j.kernel.configuration.BoltConnector
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.Set
-import kotlin.collections.all
-import kotlin.collections.dropLast
-import kotlin.collections.emptyList
-import kotlin.collections.emptyMap
-import kotlin.collections.flatMap
-import kotlin.collections.forEach
-import kotlin.collections.joinToString
-import kotlin.collections.last
-import kotlin.collections.listOf
-import kotlin.collections.mutableMapOf
-import kotlin.collections.plus
 import kotlin.collections.set
 import kotlin.reflect.KClass
 
@@ -70,7 +57,7 @@ class PersistentStoreNeo4j(
     val embeddedNeo4jPort: Int by configuredValue { 7777 }
 
     // --- set when config is called ---
-    private var _neo4jService: GraphDatabaseService? = null
+    private var _neo4jService: DatabaseManagementService? = null
     private lateinit var _neo4j: Driver
     private lateinit var _neo4JReader: Neo4JReader
 
@@ -118,14 +105,11 @@ class PersistentStoreNeo4j(
         val embedded = settings["embedded"] as Boolean? ?: false
         if (embedded) {
             af.log.info { "starting embedded neo4j database in directory $embeddedNeo4jDirectory at $embeddedNeo4jAddress:$embeddedNeo4jPort" }
-            val embeddedDirectory = File("${this.embeddedNeo4jDirectory}/data")
-            val bolt = BoltConnector("0")
-            this._neo4jService = GraphDatabaseFactory() //
-                    .newEmbeddedDatabaseBuilder(embeddedDirectory)
-                    .setConfig(bolt.type, "BOLT")
-                    .setConfig(bolt.enabled, "true")
-                    .setConfig(bolt.listen_address, "$embeddedNeo4jAddress:$embeddedNeo4jPort")
-                    .newGraphDatabase()
+            val embeddedDirectory = Paths.get("${this.embeddedNeo4jDirectory}/data")
+            this._neo4jService = DatabaseManagementServiceBuilder(embeddedDirectory)//
+                    .setConfig(BoltConnector.enabled, true)
+                    .setConfig(BoltConnector.listen_address, SocketAddress(embeddedNeo4jAddress,embeddedNeo4jPort))
+                    .build()
 
             // Registers a shutdown hook for the Neo4j instance so that it
             // shuts down nicely when the VM exits (even if you "Ctrl-C" the
@@ -161,7 +145,7 @@ class PersistentStoreNeo4j(
                 },
                 { raw ->
                     val unixMillis = raw.toInstant().toEpochMilli()
-                    DateTime.fromUnix(unixMillis)
+                    DateTime.fromUnixMillis(unixMillis)
                 })
 
         val komposite = settings["komposite"] as List<String>
@@ -172,7 +156,7 @@ class PersistentStoreNeo4j(
         komposite.forEach {
             this._registry.registerFromConfigString(it, emptyMap())
         }
-        this._registry.registerFromConfigString(DatatypeRegistry.KOTLIN_STD, defaultPrimitiveMappers)
+        this._registry.registerFromKompositeModel(DatatypeRegistry.KOTLIN_STD_MODEL, defaultPrimitiveMappers)
     }
 
     override fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String) {
@@ -257,7 +241,7 @@ class PersistentStoreNeo4j(
     override fun <T : Any> delete(type: KClass<T>, identity: String) {
         try {
             af.log.trace { "delete($identity)" }
-            val label = this._registry.findDatatypeByClass(type)!!.qualifiedName(".")
+            val label = this._registry.findDatatypeByClass(type)!!.qualifiedName
             val path = "/$identity"
             val cypherStatements = listOf(CypherDeleteRecursive(label, path))
             this.executeWriteCypher(cypherStatements)

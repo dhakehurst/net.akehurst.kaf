@@ -17,12 +17,9 @@
 package net.akehurst.kaf.technology.messageChannel.websocket.client.ktor
 
 import io.ktor.client.HttpClient
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.ws
+import io.ktor.client.plugins.websocket.*
 import io.ktor.http.HttpMethod
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.WebSocketSession
-import io.ktor.http.cio.websocket.readText
+import io.ktor.websocket.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
@@ -110,6 +107,7 @@ class MessageChannelWebsocketKtor<T : Any>(
                     is Frame.Close -> {
                         // handled in finally block
                     }
+                    else -> error("Internal Error: not handed '${frame::class.simpleName}'")
                 }
             }
         } finally {
@@ -129,7 +127,7 @@ class MessageChannelWebsocketKtor<T : Any>(
 
     override fun send(endPointId: T, channelId: ChannelIdentity, message: String) {
         val frame = Frame.Text("${channelId.value}${MessageChannel.DELIMITER}${message}")
-        websocket?.outgoing?.offer(frame)
+        websocket?.outgoing?.trySend(frame)
     }
 
 

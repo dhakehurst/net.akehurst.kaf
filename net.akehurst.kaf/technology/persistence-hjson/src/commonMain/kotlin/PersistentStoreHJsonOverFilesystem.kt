@@ -15,11 +15,10 @@
  */
 package net.akehurst.kaf.technology.persistence.hjson
 
-import com.soywiz.klock.DateTime
+
+import korlibs.time.DateTime
 import net.akehurst.hjson.*
 import net.akehurst.kaf.common.api.Component
-import net.akehurst.kaf.common.api.Identifiable
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.externalConnection
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
@@ -42,7 +41,6 @@ class PersistentStoreHJsonOverFilesystem(
 
     private val serialiser = KSerialiserHJson()
 
-    @ExperimentalStdlibApi
     private fun buildHJson(rootItem: Any): ByteArray {
         val doc = this.serialiser.toHJson(rootItem, rootItem)
         val bytes = doc.toHJsonString().encodeToByteArray()
@@ -81,28 +79,25 @@ class PersistentStoreHJsonOverFilesystem(
         af.log.debug { "trying: to register komposite information: $komposite" }
         this.serialiser.registerKotlinStdPrimitives()
         komposite.forEach {
-            this.serialiser.confgureDatatypeModel(it)
+            this.serialiser.confgureFromKompositeString(it)
         }
         (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>).forEach { (k, v) ->
             this.serialiser.registerPrimitiveAsObject(k as KClass<Any>, v.toRaw, v.toPrimitive)
         }
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Any> create(type: KClass<T>, item: T, identity:T.()->String) {
         val uri = calcUri(item.identity())
         val bytes = buildHJson(item)
         this.fs.write(uri, bytes)
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity:T.()->String) {
         itemSet.forEach {
             this.create(type, it, identity)
         }
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Any> read(type: KClass<T>, identity: String): T {
         val uri = calcUri(identity)
         val bytes = fs.read(uri)
@@ -115,7 +110,6 @@ class PersistentStoreHJsonOverFilesystem(
         TODO("not implemented")
     }
 
-    @ExperimentalStdlibApi
     override fun <T : Any> readAll(type: KClass<T>, identities: Set<String>): Set<T> {
         val result = identities.map {
             this.read(type, it)

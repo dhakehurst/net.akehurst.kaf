@@ -1,8 +1,8 @@
 val version_komposite: String by project
 val version_kotlinx: String by project
 
-val version_neo4j = "3.5.13"
-val version_neo4j_driver = "4.0.0"
+val version_neo4j: String by project
+val version_neo4j_driver: String by project
 val version_agl: String by project
 val version_klock: String by project
 val version_coroutines:String by project
@@ -30,9 +30,8 @@ dependencies {
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-api:$version_komposite")
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-processor:$version_komposite")
     commonTestImplementation("net.akehurst.language:agl-processor:$version_agl")
-    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$version_coroutines")
-    jvm8TestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
-    jsTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$version_coroutines")
+    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
+
 
 }
 

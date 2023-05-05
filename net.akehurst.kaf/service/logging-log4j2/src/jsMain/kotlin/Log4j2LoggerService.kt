@@ -23,7 +23,7 @@ class LoggingServiceLog4j2(
 ) : LoggingService {
 
     override fun create(identity: String): Logger {
-        TODO("This LoggerService is not supported in a Macos64 Native platform")
+        TODO("This LoggerService is not supported in a Javascript platform")
     }
 
 }

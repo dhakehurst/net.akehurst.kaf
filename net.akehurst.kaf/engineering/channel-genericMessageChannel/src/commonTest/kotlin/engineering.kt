@@ -13,6 +13,7 @@ import net.akehurst.kaf.engineering.genericMessageChannel.interface2MessageChann
 import net.akehurst.kaf.engineering.genericMessageChannel.messageChannel2Interface
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
 import net.akehurst.kotlin.json.JsonDocument
+import net.akehurst.kotlin.komposite.processor.komposite
 import net.akehurst.kotlin.kserialisation.json.KSerialiserJson
 import kotlin.js.JsName
 
@@ -20,20 +21,22 @@ import kotlin.js.JsName
 class Serialiser {
 
     companion object {
-        val KOMPOSITE = """
-            namespace net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational {
-                datatype Credentials {
-                    val username:String
-                    val password:String
+        val KOMPOSITE = komposite {
+            namespace("net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational") {
+                dataType("Credentials") {
+                    constructorArguments {
+                        composite("username","String")
+                        composite("password","String")
+                    }
                 }
             }
-        """.trimIndent()
+        }
     }
 
     internal val kserialiser = KSerialiserJson()
 
     init {
-        this.kserialiser.confgureDatatypeModel(KOMPOSITE);
+        this.kserialiser.confgureFromKompositeModel(KOMPOSITE)
         this.kserialiser.registerKotlinStdPrimitives();
     }
 
@@ -79,7 +82,7 @@ class Gui2User : Component {
 class Gui2UserHandlerDelegate {
     val serialiser = Serialiser()
     lateinit var channel: MessageChannel<String>
-    val UserRequest = interface2MessageChannel<UserRequest, String>({ this.channel }, { args -> serialiser.toJson(args, args).toJsonString() })
+    val UserRequest = interface2MessageChannel<UserRequest, String>({ this.channel }, { args -> serialiser.toJson(args, args).toFormattedJsonString() })
 }
 
 class Gui2UserHandler(
@@ -138,7 +141,7 @@ class User2Gui : Component {
 class User2GuiHandlerDelegate {
     val serialiser = Serialiser()
     lateinit var channel: MessageChannel<String>
-    val UserNotification = interface2MessageChannel<UserNotification, String>({ this.channel }, { args -> serialiser.toJson(args, args).toJsonString() })
+    val UserNotification = interface2MessageChannel<UserNotification, String>({ this.channel }, { args -> serialiser.toJson(args, args).toFormattedJsonString() })
 }
 
 class User2GuiHandler(

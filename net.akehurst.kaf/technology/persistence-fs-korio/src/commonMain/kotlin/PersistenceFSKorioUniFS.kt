@@ -16,14 +16,13 @@
 
 package net.akehurst.kaf.technology.persistence.fs.korio
 
-import com.soywiz.korio.file.std.uniVfs
+import korlibs.io.file.std.uniVfs
 import net.akehurst.kaf.common.api.Component
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.runBlocking
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
-import net.akehurst.kotlin.komposite.common.DatatypeRegistry
+
 
 class PersistenceFSKorioUniFS(
 ) : Component, PersistenceFilesystem {

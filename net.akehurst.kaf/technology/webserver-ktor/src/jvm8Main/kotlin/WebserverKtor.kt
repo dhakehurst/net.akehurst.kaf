@@ -16,33 +16,22 @@
 
 package net.akehurst.kaf.technology.webserver.ktor
 
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
-import io.ktor.application.featureOrNull
-import io.ktor.application.install
-import io.ktor.features.CallLogging
-import io.ktor.features.DefaultHeaders
-import io.ktor.http.ContentType
-import io.ktor.http.cio.websocket.CloseReason
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.close
-import io.ktor.http.cio.websocket.readText
-import io.ktor.http.content.default
-import io.ktor.http.content.resources
-import io.ktor.http.content.static
-import io.ktor.response.respondText
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.route
-import io.ktor.routing.routing
-import io.ktor.server.engine.ApplicationEngine
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import io.ktor.sessions.*
-import io.ktor.util.generateNonce
-import io.ktor.websocket.WebSocketServerSession
-import io.ktor.websocket.WebSockets
-import io.ktor.websocket.webSocket
+
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugins
+import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.defaultheaders.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
+import io.ktor.server.websocket.*
+import io.ktor.util.*
+import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.common.realisation.afComponent
@@ -52,24 +41,28 @@ import net.akehurst.kaf.technology.messageChannel.api.ChannelIdentity
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannelException
 import net.akehurst.kaf.technology.webserver.api.Webserver
-import java.util.concurrent.TimeUnit
+import org.slf4j.event.*
+import java.time.Duration
 import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
 
-/**
- * sessionType must have a primary constructor that takes one string argument
- */
-class WebserverKtor<T : Any>(
-        val sessionType: KClass<T>,
-        val creaateDefaultSession: (nonce: String) -> T
-) : Component, MessageChannel<T>, Webserver {
+@Suppress("ExtractKtorModule")
+class WebserverKtor<SessionType : Any>(
+    //val sessionType: KClass<T>,
+    val creaateDefaultSession: (nonce: String) -> SessionType
+) : Component, MessageChannel<SessionType>, Webserver {
+
+    companion object {
+        data class Session<T>(val id:String) {
+           var data:T?=null
+        }
+    }
 
     lateinit var port_server: Port
     lateinit var port_comms: Port
 
     private val port: Int by configuredValue { 9090 }
 
-    val messageChannel: MessageChannel<T> by externalConnection()
+    val messageChannel: MessageChannel<SessionType> by externalConnection()
 
     private lateinit var server: ApplicationEngine
 
@@ -90,18 +83,30 @@ class WebserverKtor<T : Any>(
         }
         execute = {
             server = embeddedServer(Netty, port = port) {
-                install(DefaultHeaders)
-                install(CallLogging)
+                install(DefaultHeaders) {
+                    header("X-Engine", "Ktor") // will send this header with each response
+                }
+                install(CallLogging) {
+                    level = Level.INFO
+                    filter { call -> call.request.path().startsWith("/") }
+                }
                 install(Routing)
                 install(Sessions) {
-                    cookie("SESSION", sessionType)
+                    cookie<Session<*>>("SESSION")
                 }
-                install(WebSockets)
-                intercept(ApplicationCallPipeline.Features) {
+                install(WebSockets) {
+                    pingPeriod = Duration.ofSeconds(15)
+                    timeout = Duration.ofSeconds(15)
+                    maxFrameSize = Long.MAX_VALUE
+                    masking = false
+                }
+                intercept(Plugins) {
                     // create session if one does not exist already
-                    val n = call.sessions.findName(sessionType)
+                    val n = call.sessions.findName(Session::class)
                     if (call.sessions.get(n) == null) {
-                        val session = creaateDefaultSession(generateNonce()) //sessionType.primaryConstructor!!.call(generateNonce())
+                        val sessionId = generateNonce()
+                        val sessionData = creaateDefaultSession(sessionId) //sessionType.primaryConstructor!!.call(generateNonce())
+                        val session = Session<SessionType>(sessionId).also{ it.data = sessionData }
                         call.sessions.set(n, session)
                     }
                 }
@@ -114,40 +119,54 @@ class WebserverKtor<T : Any>(
             server.start(false)
         }
         finalise = {
-            server.stop(0, 0, TimeUnit.SECONDS)
+            server.stop(0, 0)
         }
     }
 
     fun addTextRoute(path: String, text: String) {
-        this.server.application.featureOrNull(Routing)?.get(path) {
-            call.respondText(text, ContentType.Text.Plain)
+        this.server.application.routing {
+            get(path) {
+                println("textRoute")
+                call.respondText(text, ContentType.Text.Plain)
+            }
         }
     }
 
     fun addStaticResourcesRoute(routePath: String, resourcePath: String, defaultFile: String = "index.html") {
-        this.server.application.featureOrNull(Routing)?.static(routePath) {
+        this.server.application.routing {
+            //staticResources(resourcePath)
+            //staticFiles()
+        }.static(routePath) {
             resources(resourcePath)
             default(defaultFile)
         }
     }
 
     fun addSinglePageApplication(pathToResources: String, spaRoute: String = "", defaultPage: String = "index.html", useFilesNotResource: Boolean = false) {
-        this.server.application.install(SinglePageApplication) {
-            this.folderPath = pathToResources
-            this.spaRoute = spaRoute
-            this.defaultPage = defaultPage
-            this.useFiles = useFilesNotResource
+        //this.server.application.install(SinglePageApplication) {
+        //    this.folderPath = pathToResources
+        //    this.spaRoute = spaRoute
+        //    this.defaultPage = defaultPage
+        //    this.useFiles = useFilesNotResource
+        //}
+        this.server.application.routing {
+            singlePageApplication {
+                this.applicationRoute = spaRoute
+                this.filesPath=pathToResources
+                this.defaultPage=defaultPage
+                this.useResources=useFilesNotResource.not()
+            }
         }
     }
 
     // --- MessageChannel ---
 
-    private val connections = mutableMapOf<T, WebSocketServerSession>()
-    private val receiveActions = mutableMapOf<ChannelIdentity, suspend (endPointId: T, message: String) -> Unit>()
+    private val connections = mutableMapOf<SessionType, WebSocketServerSession>()
+    private val receiveActions = mutableMapOf<ChannelIdentity, suspend (endPointId: SessionType, message: String) -> Unit>()
 
     private suspend fun handleWebsocketConnection(ws: WebSocketServerSession) {
-        val n = ws.call.sessions.findName(sessionType)
-        val session = ws.call.sessions.get(n) as T?
+        val n = ws.call.sessions.findName(Session::class)
+        val session = ws.call.sessions.get(n) as SessionType?
         if (session == null) {
             //this should not happen
             ws.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
@@ -171,17 +190,21 @@ class WebserverKtor<T : Any>(
                                     } else {
                                         af.log.error { "No action registered for $channelId" }
                                     }
-                                } catch (t:Throwable) {
+                                } catch (t: Throwable) {
                                     t.printStackTrace()
                                 }
                             }
                         }
+
                         is Frame.Binary -> {
                         }
+
                         is Frame.Ping -> {
                         }
+
                         is Frame.Pong -> {
                         }
+
                         is Frame.Close -> {
                             // handled in finally block
                         }
@@ -198,14 +221,14 @@ class WebserverKtor<T : Any>(
         TODO("not implemented")
     }
 
-    override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: T, message: String) -> Unit) {
+    override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: SessionType, message: String) -> Unit) {
         this.receiveActions[channelId] = action
     }
 
-    override fun send(endPointId: T, channelId: ChannelIdentity, message: String) {
+    override fun send(endPointId: SessionType, channelId: ChannelIdentity, message: String) {
         val ws = connections[endPointId] ?: throw MessageChannelException("Endpoint not found for $endPointId")
         val frame = Frame.Text("${channelId.value}${MessageChannel.DELIMITER}${message}")
-        ws.outgoing.offer(frame)
+        ws.outgoing.trySend(frame)
     }
 
 }

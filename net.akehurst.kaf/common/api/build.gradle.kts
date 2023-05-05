@@ -8,11 +8,10 @@ dependencies {
 
 }
 
-
-kt2ts {
-    jvmTargetName.set("jvm8")
-    classPatterns.set(listOf(
-            "net.akehurst.kaf.common.api.*"
+exportPublic {
+    exportPatterns.set(listOf(
+        "net.akehurst.kaf.common.api.*"
     ))
 }
+
 

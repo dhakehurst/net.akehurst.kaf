@@ -15,17 +15,13 @@
  */
 package net.akehurst.kaf.technology.persistence.hjson
 
-import com.soywiz.klock.DateTime
+
+import korlibs.time.DateTime
 import net.akehurst.hjson.*
 import net.akehurst.kaf.common.api.Component
-import net.akehurst.kaf.common.api.Identifiable
-import net.akehurst.kaf.common.api.Owner
-import net.akehurst.kaf.common.api.externalConnection
 import net.akehurst.kaf.common.realisation.afComponent
-import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
-import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
 import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 import kotlin.reflect.KClass
@@ -76,7 +72,7 @@ class PersistentStoreHJsonOverMapOfString(
         af.log.debug { "trying: to register komposite information: $komposite" }
         this.serialiser.registerKotlinStdPrimitives()
         komposite.forEach {
-            this.serialiser.confgureDatatypeModel(it)
+            this.serialiser.confgureFromKompositeString(it)
         }
         (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>).forEach { (k, v) ->
             this.serialiser.registerPrimitiveAsObject(k as KClass<Any>, v.toRaw, v.toPrimitive)
