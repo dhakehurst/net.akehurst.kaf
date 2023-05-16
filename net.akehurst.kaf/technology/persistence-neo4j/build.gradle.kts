@@ -1,3 +1,7 @@
+plugins {
+    id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin") version("1.8.21")
+}
+
 val version_komposite: String by project
 val version_kotlinx: String by project
 
@@ -30,8 +34,17 @@ dependencies {
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-api:$version_komposite")
     commonMainImplementation("net.akehurst.kotlin.komposite:komposite-processor:$version_komposite")
     commonTestImplementation("net.akehurst.language:agl-processor:$version_agl")
-    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
+    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
+        version {
+            strictly("$version_coroutines")
+        }
+    }
 
 
 }
 
+kotlinxReflect {
+    forReflectionTest.set(listOf(
+        "net.akehurst.kaf.technology.persistence.neo4j"
+    ))
+}

@@ -120,7 +120,7 @@ subprojects {
         archiveClassifier.set("javadoc")
         //from(dokkaHtml.outputDirectory)
     }
-    //tasks.named("publish").get().dependsOn("javadocJar")
+    tasks.named("publish").get().dependsOn("javadocJar")
 
     dependencies {
         "commonTestImplementation"(kotlin("test"))

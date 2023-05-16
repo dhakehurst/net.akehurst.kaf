@@ -16,10 +16,7 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import com.soywiz.klock.DateTime
-import com.soywiz.klock.Month
-import com.soywiz.klock.TimeSpan
-import com.soywiz.klock.Year
+import korlibs.time.*
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
@@ -37,28 +34,28 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 
     companion object {
         val KOMPOSITE = """
-            namespace com.soywiz.klock {
+            namespace korlibs.time {
                 primitive DateTime
                 primitive TimeSpan
             }
             namespace net.akehurst.kaf.technology.persistence.neo4j {
                 primitive PhoneNumber
                 datatype AddressBook {
-                  val  title : String
-                  car  contacts : Map<String, Contact>
+                  composite-val  title : String
+                  composite-var  contacts : Map<String, Contact>
                 }
                 datatype Contact {
-                  val  alias : String
-                  var  name : String
-                  car  emails : List<String>
-                  car  phone : Set<LabelledPhoneNumber>
-                  var  dateOfBirth : DateTime
+                  composite-val  alias : String
+                  composite-var  name : String
+                  composite-var  emails : List<String>
+                  composite-var  phone : Set<LabelledPhoneNumber>
+                  composite-var  dateOfBirth : DateTime
                   dis  age : TimeSpan
-                  var  friendsWith : Set<Contact>
+                  reference-var  friendsWith : Set<Contact>
                 }
                 datatype LabelledPhoneNumber {
-                  val label: String
-                  val number: PhoneNumber
+                  composite-val label: String
+                  composite-val number: PhoneNumber
                 }
             }
         """.trimIndent()
@@ -81,6 +78,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
 
     @BeforeTest
     fun startup() {
+        kaf_technology_persistence_neo4j_commonTest.KotlinxReflectForModule.registerUsedClasses()
         this.af.startAsync(listOf())
     }
 

@@ -35,6 +35,10 @@ dependencies {
     commonTestImplementation("net.akehurst.kotlin.komposite:komposite-api:$version_komposite")
     commonTestImplementation("net.akehurst.kotlin.komposite:komposite-processor:$version_komposite")
     commonTestImplementation("net.akehurst.language:agl-processor:$version_agl")
-    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
+    commonTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
+        version {
+            strictly("$version_coroutines")
+        }
+    }
 }
 

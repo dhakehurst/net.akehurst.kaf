@@ -6,6 +6,8 @@ import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineeri
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.User2Gui
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Core
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Gui
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.Serialiser
+import net.akehurst.kaf.engineering.genericMessageChannel.TestCredentials
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
@@ -18,7 +20,7 @@ import kotlin.test.Test
 
 class test_channel {
 
-    class TestApplication( afId: String ) : Application {
+    class TestApplication(afId: String) : Application {
         // computational
         val core = Core()
         val gui = Gui()
@@ -32,9 +34,11 @@ class test_channel {
 
         override val af = afApplication(this, afId) {
             defineService(ConfigurationService::class) {
-                ServiceConfigurationMap(mutableMapOf(
+                ServiceConfigurationMap(
+                    mutableMapOf(
                         "sut.greeter.greeting" to "Hello World!"
-                ))
+                    )
+                )
             }
             defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }
             defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
@@ -52,9 +56,22 @@ class test_channel {
     }
 
     @Test
-    fun test() {
+    fun test_application() {
+        kaf_engineering_channel_genericMessageChannel.KotlinxReflectForModule.registerUsedClasses()
         val sut = TestApplication("sut")
         sut.af.startBlocking(emptyList())
+    }
+
+    @Test
+    fun serialiser() {
+       kaf_engineering_channel_genericMessageChannel.KotlinxReflectForModule.registerUsedClasses()
+
+        val data = TestCredentials("testUser", "testPwd")
+        val sut = Serialiser()
+        val json = sut.toJson(data, data)
+
+        val data2 = sut.toData(json.toStringJson()) as TestCredentials
+
     }
 
 }

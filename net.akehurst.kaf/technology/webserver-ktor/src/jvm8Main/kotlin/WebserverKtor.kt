@@ -42,18 +42,51 @@ import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannelException
 import net.akehurst.kaf.technology.webserver.api.Webserver
 import org.slf4j.event.*
+import java.io.File
+import java.lang.StringBuilder
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
 import kotlin.reflect.KClass
 
 @Suppress("ExtractKtorModule")
-class WebserverKtor<SessionType : Any>(
+class WebserverKtor<SessionDataType : Any>(
     //val sessionType: KClass<T>,
-    val creaateDefaultSession: (nonce: String) -> SessionType
-) : Component, MessageChannel<SessionType>, Webserver {
+    val createDefaultSession: (sessionId: String) -> SessionDataType,
+    val sessionId: (SessionDataType) -> String,
+    val serialiseSession: (sessionData: SessionDataType) -> String,
+    val deserialiseSession: (serialised: String) -> SessionDataType
+) : Component, MessageChannel<SessionDataType>, Webserver {
 
     companion object {
-        data class Session<T>(val id:String) {
-           var data:T?=null
+        interface SessionIdContainer{ val sessionId:SessionId}
+        const val SESSION_SERIALISE_SEPARATOR = "$"
+        inline class SessionId(val value:String)
+        class Session(val id: SessionId) {
+            constructor(id:SessionId, data: Any): this(id) {this.data = data}
+            lateinit var data:Any
+            override fun hashCode(): Int = id.hashCode()
+            override fun equals(other: Any?): Boolean = when (other) {
+                !is Session -> false
+                else -> this.id == other.id
+            }
+
+            override fun toString(): String = "Session($id)"
+        }
+
+        fun Path.deleteRecursive() {
+            when {
+                this.isDirectory() -> {
+                    this.listDirectoryEntries().forEach { it.deleteRecursive() }
+                    this.deleteIfExists()
+                }
+                else ->  this.deleteIfExists()
+            }
         }
     }
 
@@ -61,8 +94,13 @@ class WebserverKtor<SessionType : Any>(
     lateinit var port_comms: Port
 
     private val port: Int by configuredValue { 9090 }
-
-    val messageChannel: MessageChannel<SessionType> by externalConnection()
+    private val sessionStorageDirectoryName: String by configuredValue { "./sessions" }
+    private val sessionStorageDirectory: File by lazy {
+        val path = Path.of(sessionStorageDirectoryName)
+        if(path.exists()) path.deleteRecursive()
+        Files.createDirectory(path).toFile()
+    }
+    val messageChannel: MessageChannel<SessionDataType> by externalConnection()
 
     private lateinit var server: ApplicationEngine
 
@@ -92,7 +130,25 @@ class WebserverKtor<SessionType : Any>(
                 }
                 install(Routing)
                 install(Sessions) {
-                    cookie<Session<*>>("SESSION")
+                    cookie<Session>("SESSION", directorySessionStorage(sessionStorageDirectory)) {
+                        this.serializer = object : SessionSerializer<Session> {
+                            override fun deserialize(text: String): Session {
+                                val id = text.substringBefore(SESSION_SERIALISE_SEPARATOR)
+                                val data = deserialiseSession(text.substringAfter(SESSION_SERIALISE_SEPARATOR))
+                                return Session(SessionId(id),data)
+                            }
+
+                            override fun serialize(session: Session): String {
+                                val b = StringBuilder()
+                                b.append(session.id.value)
+                                b.append(SESSION_SERIALISE_SEPARATOR)
+                                val sds = serialiseSession(session.data as SessionDataType)
+                                b.append(sds)
+                                return b.toString()
+                            }
+
+                        }
+                    }
                 }
                 install(WebSockets) {
                     pingPeriod = Duration.ofSeconds(15)
@@ -104,9 +160,9 @@ class WebserverKtor<SessionType : Any>(
                     // create session if one does not exist already
                     val n = call.sessions.findName(Session::class)
                     if (call.sessions.get(n) == null) {
-                        val sessionId = generateNonce()
-                        val sessionData = creaateDefaultSession(sessionId) //sessionType.primaryConstructor!!.call(generateNonce())
-                        val session = Session<SessionType>(sessionId).also{ it.data = sessionData }
+                        val sessionId = SessionId(generateNonce())
+                        val sessionData = createDefaultSession(sessionId.value) //sessionType.primaryConstructor!!.call(generateNonce())
+                        val session = Session(sessionId, sessionData)
                         call.sessions.set(n, session)
                     }
                 }
@@ -152,26 +208,26 @@ class WebserverKtor<SessionType : Any>(
         this.server.application.routing {
             singlePageApplication {
                 this.applicationRoute = spaRoute
-                this.filesPath=pathToResources
-                this.defaultPage=defaultPage
-                this.useResources=useFilesNotResource.not()
+                this.filesPath = pathToResources
+                this.defaultPage = defaultPage
+                this.useResources = useFilesNotResource.not()
             }
         }
     }
 
     // --- MessageChannel ---
 
-    private val connections = mutableMapOf<SessionType, WebSocketServerSession>()
-    private val receiveActions = mutableMapOf<ChannelIdentity, suspend (endPointId: SessionType, message: String) -> Unit>()
+    private val connections = mutableMapOf<SessionId, WebSocketServerSession>()
+    private val receiveActions = mutableMapOf<ChannelIdentity, suspend (sessionData: SessionDataType, message: String) -> Unit>()
 
     private suspend fun handleWebsocketConnection(ws: WebSocketServerSession) {
         val n = ws.call.sessions.findName(Session::class)
-        val session = ws.call.sessions.get(n) as SessionType?
+        val session = ws.call.sessions.get(n) as Session?
         if (session == null) {
             //this should not happen
             ws.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
         } else {
-            connections[session] = ws
+            connections[session.id] = ws
             af.log.trace { "Websocket Connection opened from $session" }
             //messageChannel.newEndPoint(session) ?
             try {
@@ -186,7 +242,7 @@ class WebserverKtor<SessionType : Any>(
                             asyncSend {
                                 try {
                                     if (this.receiveActions.containsKey(channelId)) {
-                                        this.receiveActions[channelId]?.invoke(session, message)
+                                        this.receiveActions[channelId]?.invoke(session.data as SessionDataType, message)
                                     } else {
                                         af.log.error { "No action registered for $channelId" }
                                     }
@@ -211,7 +267,7 @@ class WebserverKtor<SessionType : Any>(
                     }
                 }
             } finally {
-                connections.remove(session)
+                connections.remove(session.id)
                 af.log.trace { "Websocket Connection closed from $session" }
             }
         }
@@ -221,12 +277,13 @@ class WebserverKtor<SessionType : Any>(
         TODO("not implemented")
     }
 
-    override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: SessionType, message: String) -> Unit) {
+    override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: SessionDataType, message: String) -> Unit) {
         this.receiveActions[channelId] = action
     }
 
-    override fun send(endPointId: SessionType, channelId: ChannelIdentity, message: String) {
-        val ws = connections[endPointId] ?: throw MessageChannelException("Endpoint not found for $endPointId")
+    override fun send(endPointId: SessionDataType, channelId: ChannelIdentity, message: String) {
+        val sessionId = SessionId(this.sessionId(endPointId))
+        val ws = connections[sessionId] ?: throw MessageChannelException("Endpoint not found for $endPointId")
         val frame = Frame.Text("${channelId.value}${MessageChannel.DELIMITER}${message}")
         ws.outgoing.trySend(frame)
     }

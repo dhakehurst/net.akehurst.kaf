@@ -6,7 +6,6 @@ import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.api.externalConnection
 import net.akehurst.kaf.common.realisation.afActor
 import net.akehurst.kaf.common.realisation.afComponent
-import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Credentials
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.UserNotification
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.UserRequest
 import net.akehurst.kaf.engineering.genericMessageChannel.interface2MessageChannel
@@ -24,6 +23,15 @@ class Serialiser {
         val KOMPOSITE = komposite {
             namespace("net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational") {
                 dataType("Credentials") {
+                    constructorArguments {
+                        composite("username","String")
+                        composite("password","String")
+                    }
+                }
+            }
+            //TODO: remove
+            namespace("net.akehurst.kaf.engineering.genericMessageChannel") {
+                dataType("TestCredentials") {
                     constructorArguments {
                         composite("username","String")
                         composite("password","String")

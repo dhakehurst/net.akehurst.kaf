@@ -19,7 +19,11 @@ dependencies {
 
     commonMainImplementation("com.soywiz.korlibs.klock:klock:$version_klock")
 
-    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")
+    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
+        version {
+            strictly("$version_coroutines")
+        }
+    }
 
     commonTestImplementation(project(":kaf-service-logging-console"))
 

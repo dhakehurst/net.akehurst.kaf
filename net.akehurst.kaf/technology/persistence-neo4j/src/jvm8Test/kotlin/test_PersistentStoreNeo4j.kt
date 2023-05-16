@@ -33,7 +33,7 @@ class test_PersystentStoreNeo4j : Application {
         val KOMPOSITE = """
             namespace net.akehurst.kaf.technology.persistence.neo4j {
                 datatype A {
-                  val prop : String
+                  composite-val prop : String
                 }
             }
         """.trimIndent()
@@ -55,6 +55,7 @@ class test_PersystentStoreNeo4j : Application {
 
     @BeforeTest
     fun startup() {
+        kaf_technology_persistence_neo4j_commonTest.KotlinxReflectForModule.registerUsedClasses()
         this.af.startAsync(listOf())
     }
 

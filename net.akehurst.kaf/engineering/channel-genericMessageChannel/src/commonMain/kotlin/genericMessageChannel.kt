@@ -9,6 +9,10 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
+// Use a non test class because 'kotlinx-reflect-gradle-plugin' doesn't yet support things defined in tests
+//TODO: use one define in tests
+data class TestCredentials(val username: String, val password: String)
+
 fun <T : Any> genericHandler(
         channel: MessageChannel<T>,
         providedInterfaces: List<KClass<*>>,
