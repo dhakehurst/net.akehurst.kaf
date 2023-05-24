@@ -213,6 +213,7 @@ class WebserverKtor<SessionDataType : Any>(
                 this.useResources = useFilesNotResource.not()
             }
         }
+        af.log.debug { "added SPA route at '$spaRoute' serving '${pathToResources}' from ${if (useFilesNotResource) "files" else "resources"}, defaultPage='$defaultPage'" }
     }
 
     // --- MessageChannel ---

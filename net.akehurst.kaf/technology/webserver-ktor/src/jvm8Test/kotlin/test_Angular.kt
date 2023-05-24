@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
+ * Copyright (C) 2023 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package net.akehurst.kaf.technology.webserver.ktor
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.sessions.*
-import io.ktor.util.generateNonce
-import net.akehurst.kaf.common.api.AFActor
 import net.akehurst.kaf.common.api.Actor
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afActor
@@ -33,24 +27,13 @@ import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
-import kotlin.reflect.KClass
-
-/*
-class MyServer<T:Any>(sessionType:KClass<T>) {
-    private val ks = embeddedServer(Netty, port = 8080) {
-        install(Sessions) {
-            // cookie("SESSION", sessionType) // -- old version worked
-            cookie<T>("SESSION")  // -- new version does not work
-    }
-}
-*/
 
 fun main() {
-    val app = test_HelloWorldApp("test")
+    val app = test_Angular("test")
     app.af.startBlocking(emptyList())
 }
 
-private class test_HelloWorldApp(
+private class test_Angular(
     afId: String
 ) : Application {
 
@@ -67,7 +50,7 @@ private class test_HelloWorldApp(
     }
 
     val webserver = WebserverKtor<TestSession>(
-        createDefaultSession = { TestSession(it)},
+        createDefaultSession = { TestSession(it) },
         sessionId = { it.sessionId },
         serialiseSession = { sess -> "" },
         deserialiseSession = { sess -> TestSession(sess) }
@@ -84,8 +67,7 @@ private class test_HelloWorldApp(
             )
         }
         execute = {
-            webserver.addTextRoute("/greet", "Hello World!")
+            webserver.addSinglePageApplication("/dist","")
         }
     }
-
 }

@@ -1,3 +1,7 @@
+plugins {
+    id("net.akehurst.kotlin.gradle.plugin.jsIntegration")
+}
+
 val version_ktor: String by project
 val version_coroutines: String by project
 //val version_ktor_spa: String = "1.1.4"
@@ -35,4 +39,24 @@ dependencies {
     commonTestImplementation(project(":kaf-service-configuration-map"))
     commonTestImplementation(project(":kaf-service-commandLineHandler-simple"))
     commonTestImplementation("ch.qos.logback:logback-classic:+")
+}
+
+// define these locations because they are used in multiple places
+val ngSrcDir = project.layout.projectDirectory.dir("src/jvm8Test/angular/test-spa")
+val ngOutDir = project.layout.buildDirectory.dir("angular")
+
+jsIntegration {
+    nodeSrcDirectory.set(ngSrcDir)
+    nodeOutDirectory.set(ngOutDir)
+
+    productionCommand.set("ng build --prod --output-path=${ngOutDir.get()}/dist")
+    developmentCommand.set("ng build --output-path=${ngOutDir.get()}/dist")
+}
+
+kotlin {
+    sourceSets {
+        val jvm8Test by getting {
+            resources.srcDir(ngOutDir)
+        }
+    }
 }

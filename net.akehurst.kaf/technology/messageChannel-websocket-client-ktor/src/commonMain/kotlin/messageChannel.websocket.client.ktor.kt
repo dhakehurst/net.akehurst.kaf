@@ -32,13 +32,14 @@ import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 class MessageChannelWebsocketKtor<T : Any>(
-        val endPointId: T,
-        val host: String,
-        val port: Int,
-        val path: String
+    val endPointId: T,
+    val host: String,
+    val port: Int,
+    val path: String
 ) : Active, MessageChannel<T> {
 
-    @JsName("websocket")
+    val isConnected get() = null != this.websocket
+
     private var websocket: WebSocketSession? = null
     private val receiveActions = mutableMapOf<ChannelIdentity, suspend (endPointId: T, message: String) -> Unit>()
 
@@ -47,10 +48,10 @@ class MessageChannelWebsocketKtor<T : Any>(
             install(WebSockets)
         }
         client.ws(
-                method = HttpMethod.Get,
-                host = host,
-                port = port,
-                path = path
+            method = HttpMethod.Get,
+            host = host,
+            port = port,
+            path = path
         ) {
             handleWebsocketConnection(endPointId, this)
         }
@@ -62,7 +63,6 @@ class MessageChannelWebsocketKtor<T : Any>(
         }
     }
 
-    @JsName("afStart")
     fun afStart() {
         //TODO: can't support af on JS until more reflection support for kotlin-JS provided
         GlobalScope.launch {
@@ -72,47 +72,52 @@ class MessageChannelWebsocketKtor<T : Any>(
 
     // --- MessageChannel ---
 
-    private suspend fun handleWebsocketConnection(session:T, ws: WebSocketSession) {
+    private suspend fun handleWebsocketConnection(session: T, ws: WebSocketSession) {
         websocket = ws
-        println( "Websocket Connection opened from $session" )
+        println("Websocket Connection opened from $session")
         //af.log.trace { "Websocket Connection opened from $session" }
         try {
             ws.incoming.consumeEach { frame ->
-                println("Websocket Connection message from $session, $frame" )
+                println("Websocket Connection message from $session, $frame")
                 //af.log.trace { "Websocket Connection message from $session, $frame" }
                 when (frame) {
                     is Frame.Text -> {
                         val text = frame.readText()
                         val channelId = ChannelIdentity(text.substringBefore(MessageChannel.DELIMITER))
                         val message = text.substringAfter(MessageChannel.DELIMITER)
-                        println( "Message ${channelId.value}: $message" )
+                        println("Message ${channelId.value}: $message")
                         if (this.receiveActions.containsKey(channelId)) {
                             try {
                                 this.receiveActions[channelId]?.invoke(session, message)
-                            } catch (t:Throwable) {
+                            } catch (t: Throwable) {
                                 //af.log.error(t) { "Error invoking action $channelId" }
-                                println( "Error invoking action $channelId: $t")
+                                println("Error invoking action $channelId: $t")
                             }
                         } else {
                             //af.log.error { "Websocket Connection message from $session, $frame" }
                             println { "No action registered for $channelId" }
                         }
                     }
+
                     is Frame.Binary -> {
                     }
+
                     is Frame.Ping -> {
                     }
+
                     is Frame.Pong -> {
                     }
+
                     is Frame.Close -> {
                         // handled in finally block
                     }
+
                     else -> error("Internal Error: not handed '${frame::class.simpleName}'")
                 }
             }
         } finally {
             websocket = null
-            println( "Websocket Connection closed from $session" )
+            println("Websocket Connection closed from $session")
             //af.log.trace { "Websocket Connection closed from $session" }
         }
     }

@@ -1,5 +1,5 @@
 plugins {
-    id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin") version("1.8.21")
+    id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin")
 }
 
 val version_komposite: String by project
