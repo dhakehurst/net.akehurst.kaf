@@ -21,6 +21,9 @@ import kotlin.reflect.KFunction
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+class AsyncResult<T : Any>(val value: T?, val success: Boolean = true, val message: String? = null) {
+    constructor(message: String) : this(null, false, message)
+}
 
 interface AsyncCallContext : CoroutineContext.Element {
 }

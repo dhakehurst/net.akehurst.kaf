@@ -257,6 +257,25 @@ data class CypherMatchNodeByTypeAndPath(
     }
 }
 
+data class CypherMatchNodeByPath(
+    val path: String
+) : CypherStatement {
+    val properties = mutableListOf<CypherProperty>()
+    override fun toCypherStatement(): String {
+        val propertyStr = this.properties.map { it.toCypherString() }.joinToString(" AND ")
+        val n = "`$path`"
+        return if (propertyStr.isEmpty()) {
+            "MATCH ($n) WHERE $n.`${CypherStatement.PATH_PROPERTY}`='$path' RETURN $n"
+        } else {
+            "MATCH ($n) WHERE $n.`${CypherStatement.PATH_PROPERTY}`='$path' AND $propertyStr RETURN $n"
+        }
+    }
+
+    override fun toString(): String {
+        return this.toCypherStatement()
+    }
+}
+
 data class CypherMatchList(
         val path: String,
         val elementTypeLabel: String

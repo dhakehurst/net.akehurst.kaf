@@ -27,6 +27,7 @@ import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import net.akehurst.kotlin.komposite.api.PrimitiveMapper
+import kotlin.io.path.createTempDirectory
 import kotlin.reflect.KClass
 import kotlin.test.*
 
@@ -61,7 +62,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         """.trimIndent()
     }
 
-    val tempDir = createTempDir(".neo4j_")
+    val tempDir = createTempDirectory(".neo4j_").toFile()
 
     override val af = afApplication(this, "test") {
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }

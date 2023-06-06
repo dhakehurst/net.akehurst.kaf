@@ -52,6 +52,13 @@ data class LabelledPhoneNumber(
         val number: PhoneNumber
 )
 
+data class ContainsAnAnyProp(
+    val number:Int,
+    val something:Any?
+) : Identifiable {
+    override val identity: String get() = "id$number"
+}
+
 inline class PhoneNumber(
     val value:String
 )

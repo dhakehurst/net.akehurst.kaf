@@ -32,6 +32,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.types.TypeSystem
 import org.neo4j.graphdb.GraphDatabaseService
 import java.io.File
 import java.nio.file.Path
@@ -198,7 +199,7 @@ class PersistentStoreNeo4j(
 
     override fun <T : Any> readAllIdentity(type: KClass<T>): Set<String> {
         try {
-            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.defaultTypeSystem(), _registry)
+            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, TypeSystem.getDefault(), _registry)
             val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
             val allIds = fromNeo4JConverter.fetchAllIds(dt)
             return allIds
@@ -215,7 +216,7 @@ class PersistentStoreNeo4j(
             }.toSet()
             return itemSet
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.readAll: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.readAll: ${t.message}",t)
         }
     }
 

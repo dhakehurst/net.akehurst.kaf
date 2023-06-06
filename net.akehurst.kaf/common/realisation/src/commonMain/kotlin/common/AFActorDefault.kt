@@ -155,9 +155,33 @@ open class AFActorDefault(
     private fun <P1, P2, P3, P4> receive4(callable: KCallable<*>, context: AsyncCallContext, p1: P1, p2: P2, p3: P3, p4: P4, defaultBody: () -> Unit) {
         val key = SignalKey(callable, context)
         this.receive(callable, context) {
-            val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenRecieved...can this happen? and handle timeout!
+            val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenReceived...can this happen? and handle timeout!
             if (null != wrFunc) {
                 (wrFunc as suspend (P1, P2, P3, P4) -> Unit).invoke(p1, p2, p3, p4)
+            } else {
+                defaultBody.invoke()
+            }
+        }
+    }
+
+    private fun <P1, P2, P3, P4, P5> receive5(callable: KCallable<*>, context: AsyncCallContext, p1: P1, p2: P2, p3: P3, p4: P4, p5: P5, defaultBody: () -> Unit) {
+        val key = SignalKey(callable, context)
+        this.receive(callable, context) {
+            val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenReceived...can this happen? and handle timeout!
+            if (null != wrFunc) {
+                (wrFunc as suspend (P1, P2, P3, P4, P5) -> Unit).invoke(p1, p2, p3, p4, p5)
+            } else {
+                defaultBody.invoke()
+            }
+        }
+    }
+
+    private fun <P1, P2, P3, P4, P5, P6> receive6(callable: KCallable<*>, context: AsyncCallContext, p1: P1, p2: P2, p3: P3, p4: P4, p5: P5, p6: P6, defaultBody: () -> Unit) {
+        val key = SignalKey(callable, context)
+        this.receive(callable, context) {
+            val wrFunc = this.removeWhenReceived(key) // TODO: what if we process the receive before the whenReceived...can this happen? and handle timeout!
+            if (null != wrFunc) {
+                (wrFunc as suspend (P1, P2, P3, P4, P5, P6) -> Unit).invoke(p1, p2, p3, p4, p5, p6)
             } else {
                 defaultBody.invoke()
             }
@@ -287,7 +311,13 @@ open class AFActorDefault(
                         4 -> receive4(callable, asyncCallContext, args[0], args[1], args[2], args[3]) {
                             self.reflect().call(callable.name, *args)
                         }
-                        else -> TODO()
+                        5 -> receive5(callable, asyncCallContext, args[0], args[1], args[2], args[3], args[4]) {
+                            self.reflect().call(callable.name, *args)
+                        }
+                        6 -> receive6(callable, asyncCallContext, args[0], args[1], args[2], args[3], args[4], args[5]) {
+                            self.reflect().call(callable.name, *args)
+                        }
+                        else -> TODO("Add support for more arguments")
                     }
                     else -> throw ActorException("${self.af.identity}:${self::class.simpleName!!} does not implement ${forInterface.simpleName!!}")
                 }
