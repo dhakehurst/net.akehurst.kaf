@@ -1,9 +1,11 @@
 plugins {
     id("net.akehurst.kotlin.gradle.plugin.jsIntegration")
+    id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin")
 }
 
 val version_ktor: String by project
 val version_coroutines: String by project
+val version_kotlinx: String by project
 //val version_ktor_spa: String = "1.1.4"
 
 //repositories {
@@ -15,6 +17,7 @@ val version_coroutines: String by project
 dependencies {
 
     commonMainImplementation(project(":kaf-common-realisation"))
+    commonMainImplementation("net.akehurst.kotlinx:kotlinx-reflect:$version_kotlinx")
 
     commonMainApi(project(":kaf-technology-messageChannel-api"))
     commonMainApi(project(":kaf-technology-webserver-api"))
@@ -59,4 +62,10 @@ kotlin {
             resources.srcDir(ngOutDir)
         }
     }
+}
+
+kotlinxReflect {
+    forReflectionMain.set(listOf(
+        "net.akehurst.kaf.engineering.genericMessageChannel"
+    ))
 }

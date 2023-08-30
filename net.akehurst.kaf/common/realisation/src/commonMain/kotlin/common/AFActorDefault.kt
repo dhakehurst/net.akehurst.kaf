@@ -292,7 +292,7 @@ open class AFActorDefault(
             val lastArg = args.lastOrNull()
             if (lastArg is Continuation<*>) {
                 val asyncCallContext = lastArg.context[AsyncCallContextDefault] ?: throw AyncException("AsyncCallContext not found, call from an Actor or inside asyncSend")
-                val declaredArgsSize = args.size - 1
+                val declaredArgsSize = args.size// - 1
                 when {
                     forInterface.isInstance(self) -> when (declaredArgsSize) {
                         //TODO: what asyncContext should we use here?

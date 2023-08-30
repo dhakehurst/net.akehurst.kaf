@@ -16,6 +16,7 @@ import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import net.akehurst.kaf.technology.messageChannel.inMemory.component_MessageChannelInMemory
+import net.akehurst.kotlinx.reflect.KotlinxReflect
 import kotlin.test.Test
 
 class test_channel {
@@ -57,14 +58,15 @@ class test_channel {
 
     @Test
     fun test_application() {
-        kaf_engineering_channel_genericMessageChannel.KotlinxReflectForModule.registerUsedClasses()
+        kaf_engineering_channel_genericMessageChannel_commonTest.KotlinxReflectForModule.registerUsedClasses()
+        val klass = KotlinxReflect.classForName("net.akehurst.kaf.engineering.genericMessageChannel.TestCredentials")
         val sut = TestApplication("sut")
         sut.af.startBlocking(emptyList())
     }
 
     @Test
     fun serialiser() {
-       kaf_engineering_channel_genericMessageChannel.KotlinxReflectForModule.registerUsedClasses()
+        kaf_engineering_channel_genericMessageChannel_commonTest.KotlinxReflectForModule.registerUsedClasses()
 
         val data = TestCredentials("testUser", "testPwd")
         val sut = Serialiser()
