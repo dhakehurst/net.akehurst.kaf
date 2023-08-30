@@ -188,7 +188,7 @@ class PersistentStoreNeo4j(
     override fun <T : Any> read(type: KClass<T>, identity: String): T {
         try {
             af.log.trace { "read(${type.simpleName}, $identity)" }
-            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, this._neo4j.defaultTypeSystem(), this._registry)
+            val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, TypeSystem.getDefault(), this._registry)
             val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
             val item = fromNeo4JConverter.convertRootObject(dt, identity)
             return item as T

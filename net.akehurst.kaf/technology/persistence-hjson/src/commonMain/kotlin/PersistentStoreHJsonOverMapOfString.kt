@@ -19,7 +19,9 @@ package net.akehurst.kaf.technology.persistence.hjson
 import korlibs.time.DateTime
 import net.akehurst.hjson.*
 import net.akehurst.kaf.common.api.Component
+import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.common.realisation.afComponent
+import net.akehurst.kaf.common.realisation.afPassive
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import net.akehurst.kotlin.komposite.api.PrimitiveMapper
@@ -27,7 +29,7 @@ import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 import kotlin.reflect.KClass
 
 class PersistentStoreHJsonOverMapOfString(
-) : PersistentStore, Component {
+) : PersistentStore, Passive {
 
     data class Index(
             val kClass: KClass<*>,
@@ -45,12 +47,12 @@ class PersistentStoreHJsonOverMapOfString(
     }
 
     // --- KAF ---
-    override val af = afComponent {
-        port("persist") {
-            provides(PersistentStore::class)
-        }
+    override val af = afPassive {
+//        port("persist") {
+//            provides(PersistentStore::class)
+//        }
         initialise = { self ->
-            self.af.port["persist"].connectInternal(self)
+            //self.af.port["persist"].connectInternal(self)
         }
     }
 

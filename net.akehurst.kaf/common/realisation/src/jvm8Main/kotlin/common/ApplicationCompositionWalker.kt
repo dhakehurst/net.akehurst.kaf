@@ -32,7 +32,7 @@ class ApplicationCompositionWalker {
         val COMPOSITE_PARTS_SERVICE = listOf(Service::class.starProjectedType, Passive::class.starProjectedType)
         val COMPOSITE_PARTS_COMPONENT = listOf(Service::class.starProjectedType, Component::class.starProjectedType, Actor::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
         val COMPOSITE_PARTS_ACTIVE = listOf(Service::class.starProjectedType, Actor::class.starProjectedType, Active::class.starProjectedType, Passive::class.starProjectedType)
-        val COMPOSITE_PARTS_PASSIVE = emptyList<KType>()
+        val COMPOSITE_PARTS_PASSIVE = listOf(Passive::class.starProjectedType)
         val COMPOSITE_PARTS_AF = listOf(Service::class.starProjectedType)
     }
 

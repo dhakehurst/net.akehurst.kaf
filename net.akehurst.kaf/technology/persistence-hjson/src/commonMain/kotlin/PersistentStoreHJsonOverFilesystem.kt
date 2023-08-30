@@ -19,8 +19,10 @@ package net.akehurst.kaf.technology.persistence.hjson
 import korlibs.time.DateTime
 import net.akehurst.hjson.*
 import net.akehurst.kaf.common.api.Component
+import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.common.api.externalConnection
 import net.akehurst.kaf.common.realisation.afComponent
+import net.akehurst.kaf.common.realisation.afPassive
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
@@ -29,7 +31,7 @@ import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
 import kotlin.reflect.KClass
 
 class PersistentStoreHJsonOverFilesystem(
-) : PersistentStore, Component {
+) : PersistentStore, Passive {
 
     class FoundReferenceException : RuntimeException {
         constructor() : super()
@@ -51,13 +53,20 @@ class PersistentStoreHJsonOverFilesystem(
         return this.uriPrefix + objectIdentity + ".hjson"
     }
 
+    fun <T : Any> readFromUri(type: KClass<T>, uri: String): T {
+        val bytes = fs.read(uri)
+        val hjsonStr = bytes.decodeToString()
+        val item = this.serialiser.toData<T>(hjsonStr)
+        return item
+    }
+
     // --- KAF ---
-    override val af = afComponent {
-        port("persist") {
-            provides(PersistentStore::class)
-        }
+    override val af = afPassive {
+//        port("persist") {
+//            provides(PersistentStore::class)
+//        }
         initialise = { self ->
-            self.af.port["persist"].connectInternal(self)
+            //self.af.port["persist"].connectInternal(self)
         }
     }
 
@@ -65,13 +74,13 @@ class PersistentStoreHJsonOverFilesystem(
     override fun configure(settings: Map<String, Any>) {
         val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
         defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
-                { primitive ->
-                    val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
-                    HJsonString(str)
-                },
-                { raw ->
-                    DateTime.parse(raw.value).local
-                })
+            { primitive ->
+                val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
+                HJsonString(str)
+            },
+            { raw ->
+                DateTime.parse(raw.value).local
+            })
         val komposite = settings["komposite"] as List<String>
         if (settings.containsKey("primitiveMappers")) {
             defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>)
@@ -86,13 +95,13 @@ class PersistentStoreHJsonOverFilesystem(
         }
     }
 
-    override fun <T : Any> create(type: KClass<T>, item: T, identity:T.()->String) {
+    override fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String) {
         val uri = calcUri(item.identity())
         val bytes = buildHJson(item)
         this.fs.write(uri, bytes)
     }
 
-    override fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity:T.()->String) {
+    override fun <T : Any> createAll(type: KClass<T>, itemSet: Set<T>, identity: T.() -> String) {
         itemSet.forEach {
             this.create(type, it, identity)
         }
@@ -100,10 +109,7 @@ class PersistentStoreHJsonOverFilesystem(
 
     override fun <T : Any> read(type: KClass<T>, identity: String): T {
         val uri = calcUri(identity)
-        val bytes = fs.read(uri)
-        val hjsonStr = bytes.decodeToString()
-        val item = this.serialiser.toData<T>(hjsonStr)
-        return item
+        return readFromUri(type, uri)
     }
 
     override fun <T : Any> readAllIdentity(type: KClass<T>): Set<String> {
@@ -117,7 +123,7 @@ class PersistentStoreHJsonOverFilesystem(
         return result
     }
 
-    override fun <T : Any> update(type: KClass<T>, item: T, oldIdentity:String, newIdentity:T.()->String) {
+    override fun <T : Any> update(type: KClass<T>, item: T, oldIdentity: String, newIdentity: T.() -> String) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -125,11 +131,11 @@ class PersistentStoreHJsonOverFilesystem(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> delete(type: KClass<T>,identity: String) {
+    override fun <T : Any> delete(type: KClass<T>, identity: String) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun <T : Any> deleteAll(type: KClass<T>,identitySet: Set<String>) {
+    override fun <T : Any> deleteAll(type: KClass<T>, identitySet: Set<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
