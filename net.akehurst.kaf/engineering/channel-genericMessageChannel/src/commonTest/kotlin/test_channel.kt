@@ -2,12 +2,12 @@ package net.akehurst.kaf.engineering.channel.genericMessageChannel.test
 
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
-import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.Gui2User
-import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.User2Gui
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Core
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Credentials
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Gui
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.Gui2User
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.Serialiser
-import net.akehurst.kaf.engineering.genericMessageChannel.TestCredentials
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.engineering.User2Gui
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
@@ -18,6 +18,7 @@ import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
 import net.akehurst.kaf.technology.messageChannel.inMemory.component_MessageChannelInMemory
 import net.akehurst.kotlinx.reflect.KotlinxReflect
 import kotlin.test.Test
+
 
 class test_channel {
 
@@ -59,7 +60,7 @@ class test_channel {
     @Test
     fun test_application() {
         kaf_engineering_channel_genericMessageChannel_commonTest.KotlinxReflectForModule.registerUsedClasses()
-        val klass = KotlinxReflect.classForName("net.akehurst.kaf.engineering.genericMessageChannel.TestCredentials")
+        val klass = KotlinxReflect.classForName("net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.Credentials")
         val sut = TestApplication("sut")
         sut.af.startBlocking(emptyList())
     }
@@ -68,11 +69,11 @@ class test_channel {
     fun serialiser() {
         kaf_engineering_channel_genericMessageChannel_commonTest.KotlinxReflectForModule.registerUsedClasses()
 
-        val data = TestCredentials("testUser", "testPwd")
+        val data = Credentials("testUser", "testPwd")
         val sut = Serialiser()
         val json = sut.toJson(data, data)
-
-        val data2 = sut.toData(json.toStringJson()) as TestCredentials
+        println(json.toFormattedJsonString())
+        val data2 = sut.toData(json.toStringJson()) as Credentials
 
     }
 

@@ -16,9 +16,10 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import korlibs.time.DateTime
-import korlibs.time.TimeSpan
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import net.akehurst.kaf.common.api.Identifiable
+import kotlin.time.Duration
 
 data class A(val prop: String) : Identifiable {
     override val identity: String = prop
@@ -38,9 +39,9 @@ data class Contact(
     var name: String? = null
     var emails: MutableList<String> = mutableListOf()
     var phone: MutableSet<LabelledPhoneNumber> = mutableSetOf()
-    var dateOfBirth: DateTime = DateTime.EPOCH
+    var dateOfBirth: Instant = Instant.DISTANT_PAST
 
-    val age: TimeSpan get() = DateTime.now() - this.dateOfBirth
+    val age: Duration get() = Clock.System.now() - this.dateOfBirth
 
     var friendsWith: MutableSet<Contact> = mutableSetOf<Contact>()
 

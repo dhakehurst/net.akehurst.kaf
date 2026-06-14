@@ -3,37 +3,27 @@ plugins {
     id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin")
 }
 
-val version_ktor: String by project
-val version_coroutines: String by project
-val version_kotlinx: String by project
-//val version_ktor_spa: String = "1.1.4"
-
-//repositories {
-//    maven {
-//        setUrl("https://jitpack.io")
-//    }
-//}
-
 dependencies {
 
     commonMainImplementation(project(":kaf-common-realisation"))
-    commonMainImplementation("net.akehurst.kotlinx:kotlinx-reflect:$version_kotlinx")
+    commonMainImplementation(libs.nak.kotlinx.reflect)
 
     commonMainApi(project(":kaf-technology-messageChannel-api"))
     commonMainApi(project(":kaf-technology-webserver-api"))
 
-    jvm8MainImplementation("io.ktor:ktor-websockets:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-core:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-sessions:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-websockets:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-netty:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-default-headers:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-server-call-logging-jvm:$version_ktor")
+    jvm8MainImplementation(libs.ktor.websockets)
+    jvm8MainImplementation(libs.ktor.server.core)
+    jvm8MainImplementation(libs.ktor.server.sessions)
+    jvm8MainImplementation(libs.ktor.server.websockets)
+    jvm8MainImplementation(libs.ktor.server.netty)
+    jvm8MainImplementation(libs.ktor.server.default.headers)
+    jvm8MainImplementation(libs.ktor.server.call.logging.jvm)
+
     //jvm8MainImplementation("com.github.lamba92:ktor-spa:$version_ktor_spa")
 
-    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
+    commonMainImplementation(libs.kotlinx.coroutines) {
         version {
-            strictly("$version_coroutines")
+            strictly(libs.versions.kotlinx.coroutines.get())
         }
     }
 
@@ -49,11 +39,11 @@ val ngSrcDir = project.layout.projectDirectory.dir("src/jvm8Test/angular/test-sp
 val ngOutDir = project.layout.buildDirectory.dir("angular")
 
 jsIntegration {
-    nodeSrcDirectory.set(ngSrcDir)
-    nodeOutDirectory.set(ngOutDir)
+    nodeSrcDirectoryProd.set(ngSrcDir)
+    nodeOutDirectoryProd.set(ngOutDir)
 
-    productionCommand.set("ng build --prod --output-path=${ngOutDir.get()}/dist")
-    developmentCommand.set("ng build --output-path=${ngOutDir.get()}/dist")
+    productionCommand.set(mapOf("build" to "ng build --prod --output-path=${ngOutDir.get()}/dist"))
+    developmentCommand.set(mapOf("build" to "ng build --output-path=${ngOutDir.get()}/dist"))
 }
 
 kotlin {

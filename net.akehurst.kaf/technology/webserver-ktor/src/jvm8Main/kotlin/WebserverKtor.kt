@@ -23,7 +23,7 @@ import io.ktor.server.application.ApplicationCallPipeline.ApplicationPhase.Plugi
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -46,13 +46,14 @@ import java.io.File
 import java.lang.StringBuilder
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.time.Duration
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.reflect.KClass
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 @Suppress("ExtractKtorModule")
 class WebserverKtor<SessionDataType : Any>(
@@ -102,15 +103,14 @@ class WebserverKtor<SessionDataType : Any>(
     }
     val messageChannel: MessageChannel<SessionDataType> by externalConnection()
 
-    private lateinit var server: ApplicationEngine
+    private lateinit var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>
 
     override val af: AFComponent = afComponent {
         port_server = port("server") {
             provides(Webserver::class)
         }
         port_comms = port("comms") {
-            contract(provides = MessageChannel::class, requires = MessageChannel::class)
-
+            this.contract(provides = MessageChannel::class, requires = MessageChannel::class)
         }
 
         initialise = { self ->
@@ -128,7 +128,7 @@ class WebserverKtor<SessionDataType : Any>(
                     level = Level.INFO
                     filter { call -> call.request.path().startsWith("/") }
                 }
-                install(Routing)
+                //install(Routing)
                 install(Sessions) {
                     cookie<Session>("SESSION", directorySessionStorage(sessionStorageDirectory)) {
                         this.serializer = object : SessionSerializer<Session> {
@@ -151,8 +151,8 @@ class WebserverKtor<SessionDataType : Any>(
                     }
                 }
                 install(WebSockets) {
-                    pingPeriod = Duration.ofSeconds(15)
-                    timeout = Duration.ofSeconds(15)
+                    pingPeriod = 15.toDuration(DurationUnit.SECONDS)
+                    timeout = 15.toDuration(DurationUnit.SECONDS)
                     maxFrameSize = Long.MAX_VALUE
                     masking = false
                 }
@@ -274,10 +274,6 @@ class WebserverKtor<SessionDataType : Any>(
         }
     }
 
-    override fun <T : Any> receiveAll(interfaceToReceive: KClass<T>, target: T) {
-        TODO("not implemented")
-    }
-
     override fun receive(channelId: ChannelIdentity, action: suspend (endPointId: SessionDataType, message: String) -> Unit) {
         this.receiveActions[channelId] = action
     }
@@ -289,4 +285,7 @@ class WebserverKtor<SessionDataType : Any>(
         ws.outgoing.trySend(frame)
     }
 
+    override fun <SessionDataType : Any> receiveAll(interfaceToReceive: KClass<SessionDataType>, target: SessionDataType) {
+        TODO("not implemented")
+    }
 }

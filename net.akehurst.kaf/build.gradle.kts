@@ -15,28 +15,25 @@
  */
 
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import com.github.gmazzo.gradle.plugins.BuildConfigExtension
+import com.github.gmazzo.buildconfig.BuildConfigExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 
 plugins {
-    kotlin("multiplatform") version ("1.9.10") apply false
-    id("org.jetbrains.dokka") version ("1.8.20") apply false
-    id("com.github.gmazzo.buildconfig") version ("4.1.2") apply false
-    id("nu.studer.credentials") version ("3.0")
-    id("net.akehurst.kotlin.gradle.plugin.exportPublic") version ("1.9.10") apply false
-    id("net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin") version("1.9.10") apply false
-    id("net.akehurst.kotlin.gradle.plugin.jsIntegration")  version("1.9.10") apply false
+    alias(libs.plugins.kotlin) apply false
+    alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.buildconfig) apply false
+    alias(libs.plugins.credentials) apply true
+    alias(libs.plugins.exportPublic) apply false
+    alias(libs.plugins.reflect) apply false
+    alias(libs.plugins.jsIntegration) apply false
 }
-val kotlin_languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
-val kotlin_apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
-val jvmTargetVersion = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
+val kotlin_languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
+val kotlin_apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
+val jvmTargetVersion = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
 
 allprojects {
-    val version_project: String by project
-    val group_project = rootProject.name
-
-    group = group_project
-    version = version_project
+    group = rootProject.name
+    version = rootProject.libs.versions.project.get()
 
     project.layout.buildDirectory = File(rootProject.projectDir, ".gradle-build/${project.name}")
 }
@@ -75,28 +72,29 @@ subprojects {
     configure<KotlinMultiplatformExtension> {
         jvm("jvm8") {
             val main by compilations.getting {
-                compilerOptions.configure {
-                    languageVersion.set(kotlin_languageVersion)
-                    apiVersion.set(kotlin_apiVersion)
-                    jvmTarget.set(jvmTargetVersion)
+                compileTaskProvider.configure {
+                    compilerOptions {
+                        languageVersion.set(kotlin_languageVersion)
+                        apiVersion.set(kotlin_apiVersion)
+                        jvmTarget.set(jvmTargetVersion)
+                    }
                 }
             }
             val test by compilations.getting {
-                compilerOptions.configure {
-                    languageVersion.set(kotlin_languageVersion)
-                    apiVersion.set(kotlin_apiVersion)
-                    jvmTarget.set(jvmTargetVersion)
+                compileTaskProvider.configure {
+                    compilerOptions {
+                        languageVersion.set(kotlin_languageVersion)
+                        apiVersion.set(kotlin_apiVersion)
+                        jvmTarget.set(jvmTargetVersion)
+                    }
                 }
             }
         }
         js("js",IR) {
             binaries.library()
             generateTypeScriptDefinitions()
-            tasks.withType<KotlinJsCompile>().configureEach {
-                kotlinOptions {
-                    moduleKind = "es"
-                    useEsClasses = true
-                }
+            compilerOptions {
+                target.set("es2015")
             }
             nodejs {
                 testTask {

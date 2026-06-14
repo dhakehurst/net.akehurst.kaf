@@ -31,12 +31,13 @@ import kotlin.test.*
 class test_PersystentStoreNeo4j : Application {
 
     companion object {
-        val KOMPOSITE = """
-            namespace net.akehurst.kaf.technology.persistence.neo4j {
-                datatype A {
-                  composite-val prop : String
-                }
-            }
+        val TM = """
+            namespace net.akehurst.kaf.technology.persistence.neo4j
+              import std
+              data A {
+                constructor(prop : String)
+                cmp val prop : String
+              }
         """.trimIndent()
     }
 
@@ -76,7 +77,7 @@ class test_PersystentStoreNeo4j : Application {
                 "uri" to "bolt://localhost:7777",
                 "user" to "neo4j",
                 "password" to "neo4j",
-                "komposite" to listOf(KOMPOSITE)
+                "komposite" to listOf(TM)
         ))
     }
 

@@ -17,7 +17,6 @@
 package net.akehurst.kaf.service.configuration.api
 
 import net.akehurst.kaf.common.api.AFHolder
-import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.service.api.Service
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -30,7 +29,7 @@ fun <T : Any> configuredValue(default: () -> T): ConfiguredValue<T> {
     return ConfiguredValue<T>(null, default)
 }
 
-fun <T : Any> configuredValue(overridePropertyName: String, default: () -> T): ConfiguredValue<T> {
+fun <T : Any> configuredValueNamed(overridePropertyName: String, default: () -> T): ConfiguredValue<T> {
     return ConfiguredValue<T>(overridePropertyName, default)
 }
 

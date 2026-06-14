@@ -12,12 +12,12 @@ actual inline fun afApplication(self: Application, identity: String, init: AFApp
 }
 
 actual class AFApplicationDefault(
-        override val self: Application,
-        override val identity: String,
-        val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
-        initialise: () -> Unit,
-        execute: () -> Unit,
-        finalise: () -> Unit
+    actual override val self: Application,
+    actual override val identity: String,
+    val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
+    initialise: () -> Unit,
+    execute: () -> Unit,
+    finalise: () -> Unit
 ) :  AFDefault(identity), AFApplication {
 
     actual class Builder(
@@ -42,29 +42,29 @@ actual class AFApplicationDefault(
         }
     }
 
-    override var afHolder: AFHolder? = self
-    override var selfIdentity: String? = identity
+    actual override var afHolder: AFHolder? = self
+    actual override var selfIdentity: String? = identity
 
     private val _services = mutableMapOf<KClass<*>, Service>()
-    override val framework by serviceReference<ApplicationFrameworkService>()
+    actual override val framework by serviceReference<ApplicationFrameworkService>()
 
-    override fun <T : Service> service(serviceClass: KClass<T>): T {
+    actual override fun <T : Service> service(serviceClass: KClass<T>): T {
         TODO()
     }
 
-    override fun startAsync(commandLineArgs: List<String>) {
+    actual override fun startAsync(commandLineArgs: List<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun startBlocking(commandLineArgs: List<String>) {
+    actual override fun startBlocking(commandLineArgs: List<String>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun shutdown() {
+    actual override fun shutdown() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun terminate() {
+    actual override fun terminate() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

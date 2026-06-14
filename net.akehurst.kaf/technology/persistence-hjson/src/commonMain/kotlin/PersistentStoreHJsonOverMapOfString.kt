@@ -16,16 +16,14 @@
 package net.akehurst.kaf.technology.persistence.hjson
 
 
-import korlibs.time.DateTime
 import net.akehurst.hjson.*
-import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Passive
-import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.afPassive
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
+import net.akehurst.kotlinx.komposite.common.PrimitiveMapper
+import net.akehurst.language.typemodel.builder.typeModel
 import kotlin.reflect.KClass
 
 class PersistentStoreHJsonOverMapOfString(
@@ -59,14 +57,14 @@ class PersistentStoreHJsonOverMapOfString(
     // --- PersistentStore ---
     override fun configure(settings: Map<String, Any>) {
         val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
-        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
-                { primitive ->
-                    val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
-                    HJsonString(str)
-                },
-                { raw ->
-                    DateTime.parse(raw.value).local
-                })
+//        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
+//                { primitive ->
+//                    val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
+//                    HJsonString(str)
+//                },
+//                { raw ->
+//                    DateTime.parse(raw.value).local
+//                })
         val komposite = settings["komposite"] as List<String>
         if (settings.containsKey("primitiveMappers")) {
             defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>)
@@ -74,7 +72,7 @@ class PersistentStoreHJsonOverMapOfString(
         af.log.debug { "trying: to register komposite information: $komposite" }
         this.serialiser.registerKotlinStdPrimitives()
         komposite.forEach {
-            this.serialiser.confgureFromKompositeString(it)
+            this.serialiser.registry.registerFromAglTypesString(it, emptyMap())
         }
         (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>).forEach { (k, v) ->
             this.serialiser.registerPrimitiveAsObject(k as KClass<Any>, v.toRaw, v.toPrimitive)
@@ -96,7 +94,7 @@ class PersistentStoreHJsonOverMapOfString(
     override fun <T : Any> read(type: KClass<T>, identity: String): T {
         val id = Index(type, identity)
         val hjsonStr = this.map[id] ?: throw PersistenceException("Item of type ${type.simpleName} not found with identity $identity")
-        val item = this.serialiser.toData<T>(hjsonStr)
+        val item = this.serialiser.toData<T>(hjsonStr, type)
         return item
     }
 

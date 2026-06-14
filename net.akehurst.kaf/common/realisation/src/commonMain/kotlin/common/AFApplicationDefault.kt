@@ -16,20 +16,38 @@
 
 package net.akehurst.kaf.common.realisation
 
-import net.akehurst.kaf.common.api.AFApplication
-import net.akehurst.kaf.common.api.AFOwner
-import net.akehurst.kaf.common.api.Application
+import net.akehurst.kaf.common.api.*
 import net.akehurst.kaf.service.api.Service
+import net.akehurst.kaf.service.logging.api.Logger
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 
-expect inline fun afApplication(self:Application,identity: String,init: AFApplicationDefault.Builder.() -> Unit = {}): AFApplication
+expect inline fun afApplication(self: Application, identity: String, init: AFApplicationDefault.Builder.() -> Unit = {}): AFApplication
 
 expect class AFApplicationDefault : AFApplication {
     class Builder {
-        inline fun <reified T:Service> defineService(serviceClass: KClass<T>, noinline func:(commandLineArgs: List<String>)->T)
-        var initialise: suspend (self:Application) -> Unit
-        var execute: suspend (self:Application) -> Unit
-        var finalise: suspend (self:Application) -> Unit
+        inline fun <reified T : Service> defineService(serviceClass: KClass<T>, noinline func: (commandLineArgs: List<String>) -> T)
+        var initialise: suspend (self: Application) -> Unit
+        var execute: suspend (self: Application) -> Unit
+        var finalise: suspend (self: Application) -> Unit
         fun build(): AFApplication
     }
+
+    // -- AF --
+    override var selfIdentity: String?
+    override var afHolder: AFHolder?
+    override val identity: String
+    override val framework: ApplicationFrameworkService
+    override val log: Logger
+    override fun externalConnections(klass: KClass<*>): Map<KProperty<*>, ExternalConnection<*>>
+    override fun doInjections(root: Passive)
+
+    // -- AFApplication --
+    override val self: Application
+
+    override fun <T : Service> service(serviceClass: KClass<T>): T
+    override fun startAsync(commandLineArgs: List<String>)
+    override fun startBlocking(commandLineArgs: List<String>)
+    override fun shutdown()
+    override fun terminate()
 }

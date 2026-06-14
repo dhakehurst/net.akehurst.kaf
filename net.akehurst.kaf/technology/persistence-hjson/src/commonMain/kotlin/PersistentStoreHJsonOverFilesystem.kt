@@ -16,18 +16,16 @@
 package net.akehurst.kaf.technology.persistence.hjson
 
 
-import korlibs.time.DateTime
 import net.akehurst.hjson.*
-import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.common.api.externalConnection
-import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.afPassive
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
 import net.akehurst.kaf.technology.persistence.fs.api.PersistenceFilesystem
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
 import net.akehurst.kotlin.kserialisation.hjson.KSerialiserHJson
+import net.akehurst.kotlinx.komposite.common.PrimitiveMapper
+import net.akehurst.language.typemodel.builder.typeModel
 import kotlin.reflect.KClass
 
 class PersistentStoreHJsonOverFilesystem(
@@ -56,7 +54,7 @@ class PersistentStoreHJsonOverFilesystem(
     fun <T : Any> readFromUri(type: KClass<T>, uri: String): T {
         val bytes = fs.read(uri)
         val hjsonStr = bytes.decodeToString()
-        val item = this.serialiser.toData<T>(hjsonStr)
+        val item = this.serialiser.toData<T>(hjsonStr, type)
         return item
     }
 
@@ -73,14 +71,14 @@ class PersistentStoreHJsonOverFilesystem(
     // --- PersistentStore ---
     override fun configure(settings: Map<String, Any>) {
         val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
-        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
-            { primitive ->
-                val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
-                HJsonString(str)
-            },
-            { raw ->
-                DateTime.parse(raw.value).local
-            })
+//        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, HJsonString::class,
+//            { primitive ->
+//                val str = primitive.toString("yyyy-MM-dd'T'HH:mm:ssXXX")
+//                HJsonString(str)
+//            },
+//            { raw ->
+//                DateTime.parse(raw.value).local
+//            })
         val komposite = settings["komposite"] as List<String>
         if (settings.containsKey("primitiveMappers")) {
             defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>)
@@ -88,7 +86,7 @@ class PersistentStoreHJsonOverFilesystem(
         af.log.debug { "trying: to register komposite information: $komposite" }
         this.serialiser.registerKotlinStdPrimitives()
         komposite.forEach {
-            this.serialiser.confgureFromKompositeString(it)
+            this.serialiser.registry.registerFromAglTypesString(it, emptyMap())
         }
         (defaultPrimitiveMappers as Map<KClass<Any>, PrimitiveMapper<Any, HJsonValue>>).forEach { (k, v) ->
             this.serialiser.registerPrimitiveAsObject(k as KClass<Any>, v.toRaw, v.toPrimitive)

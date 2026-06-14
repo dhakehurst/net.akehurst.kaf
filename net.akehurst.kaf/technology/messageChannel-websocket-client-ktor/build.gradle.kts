@@ -5,9 +5,9 @@ dependencies {
     commonMainImplementation(project(":kaf-common-realisation"))
     commonMainApi(project(":kaf-technology-messageChannel-api"))
 
-    commonMainImplementation("io.ktor:ktor-client-websockets:$version_ktor")
-    jvm8MainImplementation("io.ktor:ktor-client-websockets-jvm:$version_ktor")
-    jsMainImplementation("io.ktor:ktor-client-websockets-js:$version_ktor")
+    commonMainImplementation(libs.ktor.websockets)
+    //jvm8MainImplementation("io.ktor:ktor-client-websockets-jvm:$version_ktor")
+    //jsMainImplementation("io.ktor:ktor-client-websockets-js:$version_ktor")
 
 }
 

@@ -16,8 +16,8 @@
 
 package net.akehurst.kaf.technology.persistence.hjson
 
-import com.soywiz.klock.DateTime
-import com.soywiz.klock.TimeSpan
+import korlibs.time.DateTime
+import korlibs.time.TimeSpan
 import net.akehurst.kaf.common.api.Identifiable
 
 data class A(val prop:String) : Identifiable {

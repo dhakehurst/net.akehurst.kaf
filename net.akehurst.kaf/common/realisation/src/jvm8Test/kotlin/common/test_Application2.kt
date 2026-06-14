@@ -23,7 +23,7 @@ import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.api.commandLineValue
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
-import net.akehurst.kaf.service.configuration.api.configuredValue
+import net.akehurst.kaf.service.configuration.api.configuredValueNamed
 import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
@@ -40,7 +40,7 @@ class test_Application2 {
 
         lateinit var output: Output
 
-        val confGreeting: String by configuredValue("greeting") { "unknown" }
+        val confGreeting: String by configuredValueNamed("greeting") { "unknown" }
         val greeting: String? by commandLineValue() { confGreeting }
 
         override val af = afActive {

@@ -16,15 +16,16 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import korlibs.time.DateTime
 import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.service.configuration.api.configuredValue
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
 import net.akehurst.kaf.technology.persistence.api.PersistentStore
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
-import net.akehurst.kotlin.komposite.common.DatatypeRegistry
+import net.akehurst.kotlinx.komposite.common.DatatypeRegistry
+import net.akehurst.kotlinx.komposite.common.PrimitiveMapper
+import net.akehurst.language.typemodel.api.DataType
+import net.akehurst.language.typemodel.asm.StdLibDefault
 import org.neo4j.configuration.connectors.BoltConnector
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseManagementService
@@ -33,14 +34,7 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.types.TypeSystem
-import org.neo4j.graphdb.GraphDatabaseService
-import java.io.File
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import kotlin.collections.set
 import kotlin.reflect.KClass
 
 // TODO: improve performance
@@ -66,7 +60,7 @@ class PersistentStoreNeo4j(
         get() {
             try {
                 return this._neo4JReader
-            } catch (t: Throwable) {
+            } catch (_: Throwable) {
                 throw PersistenceException("problem accessing neo4J database, perhaps configure has not been called with valid settings")
             }
         }
@@ -74,7 +68,7 @@ class PersistentStoreNeo4j(
     private fun executeWriteCypher(cypherStatements: List<CypherStatement>) {
         //TODO: use 'USING PERIODIC COMMIT' to improve performance
         this._neo4j.session().use { session ->
-            session.writeTransaction { tx ->
+            session.executeWrite { tx ->
                 cypherStatements.forEach { stm ->
                     val cypherStr = stm.toCypherStatement()
                     af.log.trace { "executeWriteCypher($cypherStr)" }
@@ -103,14 +97,14 @@ class PersistentStoreNeo4j(
 
     // --- PersistentStore ---
     override fun configure(settings: Map<String, Any>) {
-        val embedded = settings["embedded"] as Boolean? ?: false
+        val embedded = settings["embedded"] as Boolean? == true
         if (embedded) {
             af.log.info { "starting embedded neo4j database in directory $embeddedNeo4jDirectory at $embeddedNeo4jAddress:$embeddedNeo4jPort" }
             val embeddedDirectory = Paths.get("${this.embeddedNeo4jDirectory}/data")
             this._neo4jService = DatabaseManagementServiceBuilder(embeddedDirectory)//
-                    .setConfig(BoltConnector.enabled, true)
-                    .setConfig(BoltConnector.listen_address, SocketAddress(embeddedNeo4jAddress,embeddedNeo4jPort))
-                    .build()
+                .setConfig(BoltConnector.enabled, true)
+                .setConfig(BoltConnector.listen_address, SocketAddress(embeddedNeo4jAddress, embeddedNeo4jPort))
+                .build()
 
             // Registers a shutdown hook for the Neo4j instance so that it
             // shuts down nicely when the VM exits (even if you "Ctrl-C" the
@@ -125,39 +119,41 @@ class PersistentStoreNeo4j(
         val uri = settings["uri"] as String
         val user = settings["user"] as String
         val password = settings["password"] as String
-        af.log.debug { "trying: to connect to Neo4j: ${uri} as user ${user}" }
+        af.log.debug { "trying: to connect to Neo4j: $uri as user $user" }
         this._neo4j = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
         this._neo4j.session().use { session ->
-            session.readTransaction { tx ->
-                tx.run("RETURN 'Hello Neo4j'")
+            session.executeRead { tx ->
+                tx.run("RETURN 'Hello Neo4j'").stream().findFirst()
             }
         }
-        af.log.debug { "success: connected to Neo4j: ${uri} as user ${user}" }
+        af.log.debug { "success: connected to Neo4j: $uri as user $user" }
         this._neo4JReader = Neo4JReader(this._neo4j)
         af.doInjections(this.neo4JReader)
 
         //default DateTime mapping
         val defaultPrimitiveMappers = mutableMapOf<KClass<*>, PrimitiveMapper<*, *>>()
-        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, ZonedDateTime::class,
-                { primitive ->
-                    //primitive.toString("yyyy-MM-dd'T'HH:mm:ss")
-                    val instant = Instant.ofEpochMilli(primitive.unixMillisLong)
-                    ZonedDateTime.ofInstant(instant, ZoneId.systemDefault())
-                },
-                { raw ->
-                    val unixMillis = raw.toInstant().toEpochMilli()
-                    DateTime.fromUnixMillis(unixMillis)
-                })
+//        defaultPrimitiveMappers[DateTime::class] = PrimitiveMapper.create(DateTime::class, ZonedDateTime::class,
+//                { primitive ->
+//                    //primitive.toString("yyyy-MM-dd'T'HH:mm:ss")
+//                    val instant = Instant.ofEpochMilli(primitive.unixMillisLong)
+//                    ZonedDateTime.ofInstant(instant, ZoneId.systemDefault())
+//                },
+//                { raw ->
+//                    val unixMillis = raw.toInstant().toEpochMilli()
+//                    DateTime.fromUnixMillis(unixMillis)
+//                })
 
         val komposite = settings["komposite"] as List<String>
         if (settings.containsKey("primitiveMappers")) {
             defaultPrimitiveMappers.putAll(settings["primitiveMappers"] as Map<KClass<*>, PrimitiveMapper<*, *>>)
         }
         af.log.debug { "trying: to register komposite information: $komposite" }
+        this._registry.addNamespace(StdLibDefault)
         komposite.forEach {
-            this._registry.registerFromConfigString(it, emptyMap())
+            this._registry.registerFromAglTypesString(it, emptyMap())
         }
-        this._registry.registerFromKompositeModel(DatatypeRegistry.KOTLIN_STD_MODEL, defaultPrimitiveMappers)
+        //this._registry.registerFromTypeModel(DatatypeRegistry.KOTLIN_STD_MODEL, defaultPrimitiveMappers)
+        this._registry.resolveImports()
     }
 
     override fun <T : Any> create(type: KClass<T>, item: T, identity: T.() -> String) {
@@ -167,7 +163,7 @@ class PersistentStoreNeo4j(
             val cypherStatements = serialiser.createCypherMergeStatements(item, identity)
             this.executeWriteCypher(cypherStatements)
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.create: ${t.message}", t)
         }
     }
 
@@ -185,23 +181,25 @@ class PersistentStoreNeo4j(
         }
     }
 
-    override fun <T : Any> read(type: KClass<T>, identity: String): T {
+    override fun <T : Any> read(kclass: KClass<T>, identity: String): T {
         try {
-            af.log.trace { "read(${type.simpleName}, $identity)" }
+            af.log.trace { "read(${kclass.simpleName}, $identity)" }
             val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, TypeSystem.getDefault(), this._registry)
-            val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-            val item = fromNeo4JConverter.convertRootObject(dt, identity)
+            val dt = this._registry.findTypeDeclarationByKClass(kclass) ?: throw PersistenceException("type ${kclass.simpleName} is not registered, is the komposite configuration correct")
+            val item = fromNeo4JConverter.convertRootObject(dt as DataType, identity)
             return item as T
+        } catch (e: PersistenceException) {
+            throw e
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.read: ${t.message}")
+            throw PersistenceException("In ${this::class.simpleName}.read: ${t.message}", t)
         }
     }
 
-    override fun <T : Any> readAllIdentity(type: KClass<T>): Set<String> {
+    override fun <T : Any> readAllIdentity(kclass: KClass<T>): Set<String> {
         try {
             val fromNeo4JConverter = FromNeo4JConverter(this.neo4JReader, TypeSystem.getDefault(), _registry)
-            val dt = this._registry.findDatatypeByClass(type) ?: throw PersistenceException("type ${type.simpleName} is not registered, is the komposite configuration correct")
-            val allIds = fromNeo4JConverter.fetchAllIds(dt)
+            val dt = this._registry.findTypeDeclarationByKClass(kclass) ?: throw PersistenceException("type ${kclass.simpleName} is not registered, is the komposite configuration correct")
+            val allIds = fromNeo4JConverter.fetchAllIds(dt as DataType)
             return allIds
         } catch (t: Throwable) {
             throw PersistenceException("In ${this::class.simpleName}.readAllIdentity: ${t.message}")
@@ -216,7 +214,7 @@ class PersistentStoreNeo4j(
             }.toSet()
             return itemSet
         } catch (t: Throwable) {
-            throw PersistenceException("In ${this::class.simpleName}.readAll: ${t.message}",t)
+            throw PersistenceException("In ${this::class.simpleName}.readAll: ${t.message}", t)
         }
     }
 
@@ -239,12 +237,12 @@ class PersistentStoreNeo4j(
         }
     }
 
-    override fun <T : Any> delete(type: KClass<T>, identity: String) {
+    override fun <T : Any> delete(kclass: KClass<T>, identity: String) {
         try {
             af.log.trace { "delete($identity)" }
-            val label = this._registry.findDatatypeByClass(type)!!.qualifiedName
+            val label = this._registry.findTypeDeclarationByKClass(kclass)!!.qualifiedName
             val path = "/$identity"
-            val cypherStatements = listOf(CypherDeleteRecursive(label, path))
+            val cypherStatements = listOf(CypherDeleteRecursive(label.value, path))
             this.executeWriteCypher(cypherStatements)
         } catch (t: Throwable) {
             throw PersistenceException("In ${this::class.simpleName}.delete: ${t.message}")

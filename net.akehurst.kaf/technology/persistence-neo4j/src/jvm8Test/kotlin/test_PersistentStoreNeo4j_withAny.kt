@@ -31,16 +31,18 @@ import kotlin.test.*
 class test_PersystentStoreNeo4j_withAny : Application {
 
     companion object {
-        val KOMPOSITE = """
-            namespace net.akehurst.kaf.technology.persistence.neo4j {
-                datatype ContainsAnAnyProp {
-                  composite-val number : Int
-                  composite-val something: Any?
+        val TM = """
+            namespace net.akehurst.kaf.technology.persistence.neo4j
+                import std
+                data ContainsAnAnyProp {
+                  constructor(number : Integer something : Any?)
+                  cmp val number : Integer
+                  cmp val something: Any?
                 }
-                datatype A {
-                  composite-val prop : String
+                data A {
+                  constructor(prop : String)
+                  cmp val prop : String
                 }
-            }
         """.trimIndent()
     }
 
@@ -80,7 +82,7 @@ class test_PersystentStoreNeo4j_withAny : Application {
                 "uri" to "bolt://localhost:7777",
                 "user" to "neo4j",
                 "password" to "neo4j",
-                "komposite" to listOf(KOMPOSITE)
+                "komposite" to listOf(TM)
         ))
     }
 

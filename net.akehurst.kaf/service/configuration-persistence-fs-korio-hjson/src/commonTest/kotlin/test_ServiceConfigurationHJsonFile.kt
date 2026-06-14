@@ -1,10 +1,7 @@
 package net.akehurst.kaf.service.configuration.hjson
 
-import net.akehurst.hjson.HJsonDocument
 import net.akehurst.hjson.hjson
-import net.akehurst.kaf.common.api.AFPassive
 import net.akehurst.kaf.common.api.Application
-import net.akehurst.kaf.common.api.Owner
 import net.akehurst.kaf.common.api.Passive
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.common.realisation.afPassive

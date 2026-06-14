@@ -29,12 +29,12 @@ actual inline fun afApplication(self:Application, identity: String, init: AFAppl
 }
 
 actual class AFApplicationDefault(
-        override val self:Application,
-        override val identity: String,
-        val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
-        val initialiseBlock: suspend (self: Application) -> Unit,
-        val executeBlock: suspend (self: Application) -> Unit,
-        val finaliseBlock: suspend (self: Application) -> Unit
+    actual override val self:Application,
+    actual override val identity: String,
+    val defineServices: Map<KClass<*>, (commandLineArgs: List<String>) -> Service>,
+    val initialiseBlock: suspend (self: Application) -> Unit,
+    val executeBlock: suspend (self: Application) -> Unit,
+    val finaliseBlock: suspend (self: Application) -> Unit
 ) : AFDefault(identity), AFApplication {
 
     actual class Builder(val self:Application,val identity: String) {
@@ -52,10 +52,10 @@ actual class AFApplicationDefault(
         }
     }
 
-    override var selfIdentity: String? = identity
+    actual override var selfIdentity: String? = identity
 
     private val _services = mutableMapOf<KClass<*>, Service>()
-    override fun <T : Service> service(serviceClass: KClass<T>): T {
+    actual override fun <T : Service> service(serviceClass: KClass<T>): T {
         return this._services[serviceClass] as T? ?: throw ApplicationInstantiationException("Service not found for $serviceClass")
     }
 
@@ -69,7 +69,7 @@ actual class AFApplicationDefault(
     }
 
     private suspend fun initialise() {
-        val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()
+        val activeParts = this.framework.partsOf(self)//.filterIsInstance<Active>()
         activeParts.forEach {
             it.af.initialise()
         }
@@ -90,7 +90,7 @@ actual class AFApplicationDefault(
         }
     }
 
-    override fun startAsync(commandLineArgs: List<String>) {
+    actual override fun startAsync(commandLineArgs: List<String>) {
         defineAndInject(commandLineArgs)
         runBlocking {
             this.initialise()
@@ -100,7 +100,7 @@ actual class AFApplicationDefault(
         }
     }
 
-    override fun startBlocking(commandLineArgs: List<String>) {
+    actual override fun startBlocking(commandLineArgs: List<String>) {
         defineAndInject(commandLineArgs)
         runBlocking {
             this.initialise()
@@ -110,7 +110,7 @@ actual class AFApplicationDefault(
         }
     }
 
-    override fun shutdown() {
+    actual override fun shutdown() {
         log.trace { "shutdown begin" }
         runBlocking {
             val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()
@@ -124,7 +124,7 @@ actual class AFApplicationDefault(
         log.trace { "shutdown end" }
     }
 
-    override fun terminate() {
+    actual override fun terminate() {
         runBlocking {
             log.trace { "terminate" }
             val activeParts = this.framework.partsOf(self).filterIsInstance<Active>()

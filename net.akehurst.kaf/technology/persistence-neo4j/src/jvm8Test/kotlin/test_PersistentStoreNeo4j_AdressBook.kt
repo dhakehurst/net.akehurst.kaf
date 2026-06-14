@@ -16,7 +16,9 @@
 
 package net.akehurst.kaf.technology.persistence.neo4j
 
-import korlibs.time.*
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
@@ -26,39 +28,40 @@ import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
+import net.akehurst.kotlinx.komposite.common.PrimitiveMapper
+import java.time.Month
 import kotlin.io.path.createTempDirectory
 import kotlin.reflect.KClass
 import kotlin.test.*
+import kotlin.time.Duration.Companion.seconds
 
 class test_PersystentStoreNeo4j_AddressBook : Application {
 
     companion object {
-        val KOMPOSITE = """
-            namespace korlibs.time {
+        val TM = """
+            namespace korlibs.time
                 primitive DateTime
                 primitive TimeSpan
-            }
-            namespace net.akehurst.kaf.technology.persistence.neo4j {
+            
+            namespace net.akehurst.kaf.technology.persistence.neo4j
                 primitive PhoneNumber
-                datatype AddressBook {
-                  composite-val  title : String
-                  composite-var  contacts : Map<String, Contact>
+                data AddressBook {
+                  cmp val  title : String
+                  cmp var  contacts : Map<String, Contact>
                 }
-                datatype Contact {
-                  composite-val  alias : String
-                  composite-var  name : String
-                  composite-var  emails : List<String>
-                  composite-var  phone : Set<LabelledPhoneNumber>
-                  composite-var  dateOfBirth : DateTime
-                  dis  age : TimeSpan
-                  reference-var  friendsWith : Set<Contact>
+                data Contact {
+                  cmp val  alias : String
+                  cmp var  name : String
+                  cmp var  emails : List<String>
+                  cmp var  phone : Set<LabelledPhoneNumber>
+                  cmp var  dateOfBirth : DateTime
+                  //dis  age : TimeSpan
+                  ref var  friendsWith : Set<Contact>
                 }
-                datatype LabelledPhoneNumber {
-                  composite-val label: String
-                  composite-val number: PhoneNumber
+                data LabelledPhoneNumber {
+                  cmp val label: String
+                  cmp val number: PhoneNumber
                 }
-            }
         """.trimIndent()
     }
 
@@ -102,7 +105,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
                 "uri" to "bolt://localhost:7777",
                 "user" to "neo4j",
                 "password" to "admin",
-                "komposite" to listOf(KOMPOSITE),
+                "komposite" to listOf(TM),
                 "primitiveMappers" to primitiveMappers
         ))
 
@@ -137,7 +140,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         this.configure()
         val c = Contact("adam")
         c.name = "Adam Ant"
-        c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+        c.dateOfBirth = LocalDateTime(year = 1945, month = Month.NOVEMBER, dayOfMonth = 3,0,0,0).toInstant(TimeZone.UTC)
 
         //when
         sut.create(Contact::class, c) { alias }
@@ -152,7 +155,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         this.configure()
         val c = Contact("adam")
         c.name = "Adam Ant"
-        c.dateOfBirth = DateTime(year = Year(1954), month = Month.November, day = 3)
+        c.dateOfBirth = LocalDateTime(year = 1945, month = Month.NOVEMBER, dayOfMonth = 3,0,0,0).toInstant(TimeZone.UTC)
         c.emails = mutableListOf("adam@pop.com", "adam.ant@pop.com")
 
         //when
@@ -208,7 +211,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val c1 = Contact("adam")
         c1.emails.add("adam@pop.com")
         c1.emails.add("adam.ant@pop.com")
-        c1.dateOfBirth = DateTime(year = 1972, month = Month.November, day = 21)
+        c1.dateOfBirth = LocalDateTime(year = 1972, month = Month.NOVEMBER, dayOfMonth = 21,0,0,0).toInstant(TimeZone.UTC)
         c1.name = "Adam Ant"
         c1.phone.add(LabelledPhoneNumber("home", PhoneNumber("12432523523")))
         c1.phone.add(LabelledPhoneNumber("work", PhoneNumber("09876543123")))
@@ -234,7 +237,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
         val c1 = Contact("adam")
         c1.emails.add("adam@pop.com")
         c1.emails.add("adam.ant@pop.com")
-        c1.dateOfBirth = DateTime(year = 1972, month = Month.November, day = 21)
+        c1.dateOfBirth = LocalDateTime(year = 1972, month = Month.NOVEMBER, dayOfMonth = 21,0,0,0).toInstant(TimeZone.UTC)
         c1.name = "Adam Ant"
         c1.phone.add(LabelledPhoneNumber("home", PhoneNumber("12432523523")))
         c1.phone.add(LabelledPhoneNumber("work", PhoneNumber("09876543123")))
@@ -259,7 +262,7 @@ class test_PersystentStoreNeo4j_AddressBook : Application {
             //assertEquals(exp.age, act.age)
             // age will not be exactly == becaue it used DateTime.now, which changes between each call to age
             // instead check nearly equals
-            assertTrue((exp.age - act.age) < TimeSpan(100.0))
+            assertTrue((exp.age - act.age) < 100.seconds)
             assertEquals(exp.alias, act.alias)
             assertEquals(exp.dateOfBirth, act.dateOfBirth)
             assertEquals(exp.emails, act.emails)

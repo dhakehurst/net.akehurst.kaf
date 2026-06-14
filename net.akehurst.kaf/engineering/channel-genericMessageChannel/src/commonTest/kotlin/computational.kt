@@ -4,15 +4,15 @@ import net.akehurst.kaf.common.api.Component
 import net.akehurst.kaf.common.api.Port
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.common.realisation.asyncSend
-import net.akehurst.kaf.engineering.genericMessageChannel.TestCredentials
+import kotlin.jvm.JvmInline
 
-inline class Message(val value: String)
+data class Credentials(val username: String, val password: String)
 
-// Use a non test class because 'kotlinx-reflect-gradle-plugin' doesn't yet support things defined in tests
-//data class Credentials(val username: String, val password: String)
+@JvmInline
+value class Message(val value: String)
 
 interface UserRequest {
-    suspend fun requestLogin(sessionId: String, creds: TestCredentials)
+    suspend fun requestLogin(sessionId: String, creds: Credentials)
 }
 
 interface UserNotification {
@@ -27,7 +27,7 @@ class Core : Component, UserRequest {
 
     override val af = afComponent {
         port_user = port("user") {
-            contract(provides = UserRequest::class, requires = UserNotification::class)
+            this.contract(provides = UserRequest::class, requires = UserNotification::class)
         }
         initialise = { self ->
             port_user.connectInternal(self)
@@ -36,7 +36,7 @@ class Core : Component, UserRequest {
 
     // --- UserRequest ---
 
-    override suspend fun requestLogin(sessionId: String, creds: TestCredentials) {
+    override suspend fun requestLogin(sessionId: String, creds: Credentials) {
         if ("user" == creds.username) {
             port_user.forRequired(UserNotification::class).notifyLoginSuccess(sessionId, Message("OK"))
         } else {
@@ -52,7 +52,7 @@ class Gui : Component, UserNotification {
 
     override val af = afComponent {
         port_core = port("core") {
-            contract(provides = UserNotification::class, requires = UserRequest::class)
+            this.contract(provides = UserNotification::class, requires = UserRequest::class)
         }
         initialise = { self ->
             port_core.connectInternal(self)
@@ -60,7 +60,7 @@ class Gui : Component, UserNotification {
         execute = {
             // normally triggered by explicit UI action
             asyncSend {
-                port_core.forRequired(UserRequest::class).requestLogin("abcdefg", TestCredentials("user2", "pwd"))
+                port_core.forRequired(UserRequest::class).requestLogin("abcdefg", Credentials("user", "pwd"))
             }
         }
     }

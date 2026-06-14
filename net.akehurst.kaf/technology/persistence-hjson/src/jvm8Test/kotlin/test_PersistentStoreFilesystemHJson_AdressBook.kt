@@ -16,16 +16,17 @@
 
 package net.akehurst.kaf.technology.persistence.hjson
 
-import com.soywiz.klock.DateTime
-import com.soywiz.klock.Month
-import com.soywiz.klock.Year
-import com.soywiz.korio.file.std.uniVfs
+
+import korlibs.io.file.std.uniVfs
+import korlibs.time.DateTime
+import korlibs.time.Month
+import korlibs.time.Year
 import net.akehurst.kaf.common.api.Application
 import net.akehurst.kaf.common.realisation.afApplication
 import net.akehurst.kaf.service.commandLineHandler.api.CommandLineHandlerService
 import net.akehurst.kaf.service.commandLineHandler.simple.CommandLineHandlerSimple
 import net.akehurst.kaf.service.configuration.api.ConfigurationService
-import net.akehurst.kaf.service.configuration.map.ConfigurationMap
+import net.akehurst.kaf.service.configuration.map.ServiceConfigurationMap
 import net.akehurst.kaf.service.logging.api.LogLevel
 import net.akehurst.kaf.service.logging.api.LoggingService
 import net.akehurst.kaf.service.logging.console.LoggingServiceConsole
@@ -71,7 +72,7 @@ class test_PersistentStoreFilesystemHJson_AddressBook : Application {
         defineService(LoggingService::class) { LoggingServiceConsole(LogLevel.ALL) }
         defineService(CommandLineHandlerService::class) { commandLineArgs -> CommandLineHandlerSimple(commandLineArgs) }
         defineService(ConfigurationService::class) {
-            ConfigurationMap(mutableMapOf(
+            ServiceConfigurationMap(mutableMapOf(
                     "sut.embeddedNeo4jDirectory" to tempDir.absoluteFile.toString()
             ))
         }

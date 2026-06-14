@@ -1,4 +1,4 @@
-package net.akehurst.kaf.engineering.genericMessageChannel
+package net.akehurst.kaf.engineering.channel.genericMessageChannel
 
 import net.akehurst.kaf.technology.messageChannel.api.ChannelIdentity
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
@@ -9,10 +9,6 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
-// Use a non test class because 'kotlinx-reflect-gradle-plugin' doesn't yet support things defined in tests
-//TODO: use one define in tests
-data class TestCredentials(val username: String, val password: String)
-
 fun <T : Any> genericHandler(
         channel: MessageChannel<T>,
         providedInterfaces: List<KClass<*>>,
@@ -21,7 +17,6 @@ fun <T : Any> genericHandler(
 
 
 }
-
 
 inline fun <reified T : Any, U : Any> interface2MessageChannel(noinline channel: () -> MessageChannel<U>, noinline serialise: (args: List<Any>) -> String): T {
     return interface2MessageChannel(T::class, channel, serialise)

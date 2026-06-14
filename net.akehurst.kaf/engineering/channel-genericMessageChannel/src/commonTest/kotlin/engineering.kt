@@ -8,34 +8,33 @@ import net.akehurst.kaf.common.realisation.afActor
 import net.akehurst.kaf.common.realisation.afComponent
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.UserNotification
 import net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational.UserRequest
-import net.akehurst.kaf.engineering.genericMessageChannel.interface2MessageChannel
-import net.akehurst.kaf.engineering.genericMessageChannel.messageChannel2Interface
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.interface2MessageChannel
+import net.akehurst.kaf.engineering.channel.genericMessageChannel.messageChannel2Interface
 import net.akehurst.kaf.technology.messageChannel.api.MessageChannel
 import net.akehurst.kotlin.json.JsonDocument
-import net.akehurst.kotlin.komposite.processor.komposite
 import net.akehurst.kotlin.kserialisation.json.KSerialiserJson
+import net.akehurst.language.typemodel.builder.typeModel
 import kotlin.js.JsName
 
 
 class Serialiser {
 
     companion object {
-        val KOMPOSITE = komposite {
+        val KOMPOSITE = typeModel("",true) {
             namespace("net.akehurst.kaf.engineering.channel.genericMessageChannel.test.computational") {
-                dataType("Credentials") {
-                    constructorArguments {
-                        composite("username","String")
-                        composite("password","String")
+                value("Message") {
+                    constructor_ {
+                        parameter("value", "String")
                     }
+                    propertyOf(setOf(STR, VAL, CMP),"value", "String")
                 }
-            }
-            //TODO: remove
-            namespace("net.akehurst.kaf.engineering.genericMessageChannel") {
-                dataType("TestCredentials") {
-                    constructorArguments {
-                        composite("username","String")
-                        composite("password","String")
+                data("Credentials") {
+                    constructor_ {
+                        parameter("username", "String")
+                        parameter("password", "String")
                     }
+                    propertyOf(setOf(STR, VAL, CMP),"username", "String")
+                    propertyOf(setOf(STR, VAL, CMP),"password", "String")
                 }
             }
         }
@@ -44,8 +43,8 @@ class Serialiser {
     internal val kserialiser = KSerialiserJson()
 
     init {
-        this.kserialiser.confgureFromKompositeModel(KOMPOSITE)
-        this.kserialiser.registerKotlinStdPrimitives();
+        this.kserialiser.configureFromTypeModel(KOMPOSITE)
+        this.kserialiser.registerKotlinStdPrimitives()
     }
 
     @JsName("toData")
@@ -75,7 +74,7 @@ class Gui2User : Component {
 
     override val af = afComponent {
         port_gui = port("gui") {
-            contract(provides = UserRequest::class, requires = UserNotification::class)
+            this.contract(provides = UserRequest::class, requires = UserNotification::class)
         }
         port_comms = port("comms") {
             contract(provides = MessageChannel::class, requires = MessageChannel::class)

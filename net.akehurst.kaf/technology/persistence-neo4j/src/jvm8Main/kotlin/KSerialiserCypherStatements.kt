@@ -1,11 +1,12 @@
 package net.akehurst.kaf.technology.persistence.neo4j
 
 import net.akehurst.kaf.technology.persistence.api.PersistenceException
-import net.akehurst.kotlin.komposite.api.PrimitiveMapper
-import net.akehurst.kotlin.komposite.common.DatatypeRegistry
-import net.akehurst.kotlin.komposite.common.WalkInfo
-import net.akehurst.kotlin.komposite.common.kompositeWalker
 import net.akehurst.kotlinx.collections.Stack
+import net.akehurst.kotlinx.komposite.common.DatatypeRegistry
+import net.akehurst.kotlinx.komposite.common.PrimitiveMapper
+import net.akehurst.kotlinx.komposite.common.WalkInfo
+import net.akehurst.kotlinx.komposite.common.kompositeWalker
+import net.akehurst.language.typemodel.asm.StdLibDefault
 
 class KSerialiserCypherStatements(
         val registry: DatatypeRegistry
@@ -29,10 +30,10 @@ class KSerialiserCypherStatements(
                     KEY = CypherStatement.KEY_RELATION
                     VALUE = CypherStatement.VALUE_RELATION
                 }
-                collBegin { path, info, type, coll ->
+                collBegin { path, info, type, coll,_ ->
                     WalkInfo(info.up, info.acc)
                 }
-                mapBegin { path, info, map ->
+                mapBegin { path, info, map,_,_,_ ->
                     WalkInfo(info.up, info.acc)
                 }
                 //               mapEntryValueBegin { key, info, entry ->
@@ -73,17 +74,17 @@ class KSerialiserCypherStatements(
                 KEY = CypherStatement.KEY_RELATION
                 VALUE = CypherStatement.VALUE_RELATION
             }
-            nullValue { path, info ->
+            nullValue { path, info,_ ->
                 currentObjStack.push(CypherValue(null))
                 WalkInfo(path, info.acc)
             }
-            primitive { path, info, primitive, mapper ->
+            primitive { path, info, data, targetType, mapper ->
                 val cypherValue = if (null == mapper) {
-                    CypherValue(primitive)
+                    CypherValue(data)
                 } else {
-                    val cy = (mapper as PrimitiveMapper<Any, Any>?)?.toRaw?.invoke(primitive)
-                            ?: throw PersistenceException("Do not know how to convert ${primitive::class} to json, did you register its converter")
-                    val raw = mapper.toRaw(primitive)
+                    val cy = (mapper as PrimitiveMapper<Any, Any>?)?.toRaw?.invoke(data)
+                            ?: throw PersistenceException("Do not know how to convert ${data::class} to json, did you register its converter")
+                    val raw = mapper.toRaw(data)
                     CypherValue(raw) //TODO: use qualified name from datatype
                 }
                 currentObjStack.push(cypherValue)
@@ -91,26 +92,26 @@ class KSerialiserCypherStatements(
             }
             reference { path, info, value, property ->
                 val refPath = calcReferencePath(rootItem, value)
-                val fromLabel = property.datatype.qualifiedName
+                val fromLabel = property.owner.qualifiedName
                 val fromId = (rootPath + path.dropLast(1)).joinToString("/", "/")
                 val relLabel = path.last()
-                val toLabel = property.propertyType.declaration.qualifiedName
+                val toLabel = property.typeInstance.qualifiedTypeName
                 val toId = (rootPath + refPath).joinToString("/", "/")
-                val stm = CypherReference(fromLabel, fromId, relLabel, toLabel, toId)
+                val stm = CypherReference(fromLabel.value, fromId, relLabel, toLabel.value, toId)
                 currentObjStack.push(stm)
                 WalkInfo(info.up, info.acc + stm)
             }
-            collBegin { path, info, type, coll ->
+            collBegin { path, info, data, type,el ->
                 val objId = (rootPath + path).joinToString("/", "/")
                 val stm = when {
-                    type.isList -> CypherList(objId, coll.size)
-                    type.isSet -> CypherSet(objId, coll.size)
+                    type == StdLibDefault.List -> CypherList(objId, data.size)
+                    type == StdLibDefault.Set -> CypherSet(objId, data.size)
                     else -> throw PersistenceException("Collection type ${type.name} is not supported")
                 }
                 currentObjStack.push(stm)
                 WalkInfo(info.up, info.acc + stm)
             }
-            collElementEnd { path, info, element ->
+            collElementEnd { path, info, element,_ ->
                 val element = currentObjStack.pop()
                 val cyColl = currentObjStack.peek()
                 when (element) {
@@ -145,17 +146,17 @@ class KSerialiserCypherStatements(
                     else -> throw PersistenceException("Collection element type ${element::class.simpleName} is not supported")
                 }
             }
-            mapBegin { path, info, map ->
+            mapBegin { path, info, map,_,_,_ ->
                 val objId = (rootPath + path).joinToString("/", "/")
                 val stm = CypherMap(objId, map.size)
                 currentObjStack.push(stm)
                 WalkInfo(info.up, info.acc + stm)
             }
-            mapEntryKeyEnd { path, info, entry ->
+            mapEntryKeyEnd { path, info, entry,_,_ ->
                 //val cyKey = currentObjStack.pop()
                 WalkInfo(info.up, info.acc)
             }
-            mapEntryValueEnd { path, info, entry ->
+            mapEntryValueEnd { path, info, entry,_,_ ->
                 var acc = info.acc
                 val cyValue = currentObjStack.pop()
                 val cyKey = currentObjStack.pop()
@@ -192,10 +193,10 @@ class KSerialiserCypherStatements(
             objectBegin { path, info, obj, datatype ->
                 val objId = (rootPath + path).joinToString("/", "/")
                 val additionalLabels = datatype.allSuperTypes.map {
-                    it.type.declaration.qualifiedName
+                    it.qualifiedTypeName.value
                 }
                 val objClass = datatype.qualifiedName
-                val obj = CypherObject(objClass, objId, additionalLabels)
+                val obj = CypherObject(objClass.value, objId, additionalLabels)
                 currentObjStack.push(obj)
                 WalkInfo(info.up, info.acc + obj)
             }
@@ -215,27 +216,27 @@ class KSerialiserCypherStatements(
                     is CypherList -> {
                         val parent = currentObjStack.peek() as CypherObject
                         val comp = if (property.isComposite) {
-                            CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherComposite(parent.label, parent.path, property.name.value, value.label, value.path)
                         } else {
-                            CypherReference(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherReference(parent.label, parent.path, property.name.value, value.label, value.path)
                         }
                         acc += comp
                     }
                     is CypherSet -> {
                         val parent = currentObjStack.peek() as CypherObject
                         val comp = if (property.isComposite) {
-                            CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherComposite(parent.label, parent.path, property.name.value, value.label, value.path)
                         } else {
-                            CypherReference(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherReference(parent.label, parent.path, property.name.value, value.label, value.path)
                         }
                         acc += comp
                     }
                     is CypherMap -> {
                         val parent = currentObjStack.peek() as CypherObject
                         val comp = if (property.isComposite) {
-                            CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherComposite(parent.label, parent.path, property.name.value, value.label, value.path)
                         } else {
-                            CypherReference(parent.label, parent.path, property.name, value.label, value.path)
+                            CypherReference(parent.label, parent.path, property.name.value, value.label, value.path)
                         }
                         acc += comp
                     }
@@ -243,7 +244,7 @@ class KSerialiserCypherStatements(
                     }
                     is CypherObject -> {
                         val parent = currentObjStack.peek() as CypherObject
-                        val comp = CypherComposite(parent.label, parent.path, property.name, value.label, value.path)
+                        val comp = CypherComposite(parent.label, parent.path, property.name.value, value.label, value.path)
                         acc += comp
                     }
                     else -> throw PersistenceException("Internal Error, ${value::class} not supported")

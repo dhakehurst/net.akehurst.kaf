@@ -28,6 +28,7 @@ local.properties
 .gradle-build/
 .gradle/
 .idea/
+.kotlin/
 out/
 bin/
 build/

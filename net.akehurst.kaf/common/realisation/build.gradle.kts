@@ -8,10 +8,10 @@ dependencies {
     commonMainApi(project(":kaf-service-configuration-api"))
     commonMainApi(project(":kaf-service-commandLineHandler-api"))
 
-    commonMainImplementation("net.akehurst.kotlinx:kotlinx-reflect:$version_kotlinx")
-    commonMainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines") {
+    commonMainImplementation(libs.nak.kotlinx.reflect)
+    commonMainImplementation(libs.kotlinx.coroutines) {
         version {
-            strictly("$version_coroutines")
+            strictly(libs.versions.kotlinx.coroutines.get())
         }
     }
     //jvm8MainImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_coroutines")

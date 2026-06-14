@@ -1,0 +1,72 @@
+[versions]
+project = "2.1.21"
+
+kotlin = "2.1.21"
+dokka = "2.0.0"
+exportPublic = "2.1.21"
+buildconfig = "5.5.0"
+credentials = "3.0"
+jsIntegration = "2.1.21"
+
+nal-agl-processor = "4.2.1.21"
+
+nak-kserialisation = "2.1.21"
+nak-hjson = "2.1.21"
+nak-kotlinx = "2.1.21"
+
+ktor = "3.0.2"
+kotlinx-coroutines = "1.10.2"
+log4j = "3.0.0-beta2"
+kotlinx-io = "0.7.0"
+kotlinx-datetime = "0.6.2"
+korlibs = "6.0.1"
+neo4j = "2025.05.0"
+neo4j-driver = "5.26.8"
+clikt = "5.0.3"
+
+[libraries]
+nal-agl-processor = { module = "net.akehurst.language:agl-processor", version.ref = "nal-agl-processor" }
+nal-kotlinx-komposite = { module = "net.akehurst.language:kotlinx-komposite", version.ref = "nal-agl-processor" }
+
+nak-kserialisation-json = { module = "net.akehurst.kotlin.kserialisation:kserialisation-json", version.ref = "nak-kserialisation" }
+nak-kserialisation-hjson = { module = "net.akehurst.kotlin.kserialisation:kserialisation-hjson", version.ref = "nak-kserialisation" }
+nak-hjson = { module = "net.akehurst.kotlin.hjson:hjson", version.ref = "nak-hjson" }
+nak-kotlinx-collections = { module = "net.akehurst.kotlinx:kotlinx-collections", version.ref = "nak-kotlinx" }
+nak-kotlinx-reflect = { module = "net.akehurst.kotlinx:kotlinx-reflect", version.ref = "nak-kotlinx" }
+
+ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-sessions = { module = "io.ktor:ktor-server-sessions", version.ref = "ktor" }
+ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-default-headers = { module = "io.ktor:ktor-server-default-headers", version.ref = "ktor" }
+ktor-server-call-logging-jvm = { module = "io.ktor:ktor-server-call-logging-jvm", version.ref = "ktor" }
+
+kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-datetime = {module="org.jetbrains.kotlinx:kotlinx-datetime", version.ref="kotlinx-datetime"}
+
+korlibs-korio = { module = "com.soywiz:korlibs-io", version.ref = "korlibs" }
+#korlibs-time = { module = "com.soywiz:korlibs-time", version.ref = "korlibs" }
+#korlibs-klock = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+
+log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+log4j-bridge-log4j1 = { module = "org.apache.logging.log4j:log4j-1.2-api", version.ref = "log4j" }
+log4j-bridge-jul= { module = "org.apache.logging.log4j:log4j-jul", version.ref = "log4j" }
+log4j-bridge-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j" }
+log4j-bridge-jcl = { module = "org.apache.logging.log4j:log4j-jcl", version.ref = "log4j" }
+
+neo4j-java-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j-driver" }
+neo4j = { module = "org.neo4j:neo4j", version.ref = "neo4j" }
+
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+exportPublic =  { id = "net.akehurst.kotlin.gradle.plugin.exportPublic", version.ref = "exportPublic" }
+reflect =  { id = "net.akehurst.kotlinx.kotlinx-reflect-gradle-plugin", version.ref = "nak-kotlinx" }
+buildconfig =  { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }
+credentials =  { id = "nu.studer.credentials", version.ref = "credentials" }
+jsIntegration =  { id = "net.akehurst.kotlin.gradle.plugin.jsIntegration", version.ref = "jsIntegration" }
